@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key><string>K10s</string>
+	<key>CFBundleDisplayName</key><string>K10s</string>
+	<key>CFBundleIdentifier</key><string>com.mechanomythia.k10s</string>
+	<key>CFBundleExecutable</key><string>K10s</string>
+	<key>CFBundleIconFile</key><string>AppIcon</string>
+	<key>CFBundleIconName</key><string>AppIcon</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleShortVersionString</key><string>__VERSION__</string>
+	<key>CFBundleVersion</key><string>__VERSION__</string>
+	<key>LSMinimumSystemVersion</key><string>14.0</string>
+	<key>NSHighResolutionCapable</key><true/>
+	<!-- Sparkle auto-update. SUPublicEDKey is added at build time from the signing secret. -->
+	<key>SUFeedURL</key><string>https://github.com/Mechanomythia/k10s/releases/latest/download/appcast.xml</string>
+	<key>SUEnableAutomaticChecks</key><true/>
+	<key>SUAutomaticallyUpdate</key><true/>
+	<key>SUScheduledCheckInterval</key><integer>21600</integer>
+	<key>NSHumanReadableCopyright</key><string>Kubernetes cluster browser</string>
+</dict>
+</plist>
