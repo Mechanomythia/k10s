@@ -64,7 +64,7 @@ struct WindowKeys: NSViewRepresentable {
         case "y": _ = tab.openInspector(.yaml)
         case "v": _ = tab.openInspector(.events)
         case "e": tab.edit()
-        case "s": return tab.request(.scale)
+        case "s": return tab.request(tab.kind?.isPod == true ? .shell : .scale)
         case "r": return tab.request(.restart)
         case "c": tab.copyName()
         case "l": _ = tab.openInspector(.logs)

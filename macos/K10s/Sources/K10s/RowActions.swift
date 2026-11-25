@@ -2,7 +2,7 @@ import AppKit
 import K10sCore
 import SwiftUI
 
-enum RowAction { case delete, scale, restart }
+enum RowAction { case delete, scale, restart, shell }
 
 /// A write waiting for its confirm sheet; the window presents it.
 struct PendingAction: Identifiable {
@@ -30,6 +30,7 @@ extension TabModel {
         guard let row = selection, let kind else { return false }
         if action == .scale, !kind.scalable { return false }
         if action == .restart, !kind.restartable { return false }
+        if action == .shell, !kind.isPod { return false }
         let cols = table.columns.map { $0.uppercased() }
         let cells = Dictionary(zip(cols, table.cells(of: row)), uniquingKeysWith: { a, _ in a })
         pendingAction = PendingAction(action: action, row: row, kind: kind, cells: cells)
@@ -69,6 +70,7 @@ struct RowActionItems: View {
             Button("Edit…", action: act { tab.edit() })
             if tab.kind?.scalable == true { Button("Scale…", action: act { _ = tab.request(.scale) }) }
             if tab.kind?.restartable == true { Button("Restart", action: act { _ = tab.request(.restart) }) }
+            if tab.kind?.isPod == true { Button("Open shell", action: act { _ = tab.request(.shell) }) }
             Button("Delete…", action: act { _ = tab.request(.delete) })
             Divider()
             Button("Copy name", action: act { tab.copyName() })
@@ -114,6 +116,8 @@ struct PendingActionSheet: View {
                          actionLabel: "Restart \(kind.noun)") {
                 let _: Empty = try await engine.request(Method.workloadRestart, objectParams)
             }
+        case .shell:
+            ShellSheet(row: row, protected: isProtected)
         case .scale:
             ScaleSheet(row: row, kind: kind, protected: isProtected, cells: pending.cells)
         }
@@ -169,5 +173,69 @@ private struct ScaleSheet: View {
             let _: Empty = try await engine.request(Method.workloadScale, p)
         })
         .onAppear { if text.isEmpty, let c = current { text = String(c) } }
+    }
+}
+
+/// Open shell: picks the container when there are several, confirms on protected contexts
+/// (plain confirm, no typed name), and opens directly when neither applies.
+private struct ShellSheet: View {
+    let row: Row
+    let protected: Bool
+    @Environment(EngineClient.self) private var engine
+    @Environment(\.dismiss) private var dismiss
+    @State private var containers: [String]?
+    @State private var loadError: String?
+    @State private var container = ""
+
+    private var namespace: String { row.namespace ?? "" }
+
+    private func open() throws {
+        try TerminalLauncher.open(argv: TerminalCommand.execArgv(
+            context: row.context, namespace: namespace, pod: row.name, container: container))
+    }
+
+    var body: some View {
+        Group {
+            if let containers, protected || containers.count > 1 {
+                ConfirmSheet(title: "Open a shell in \(row.name)?", context: row.context, namespace: row.namespace,
+                             consequence: Text("Opens kubectl exec in your terminal."),
+                             protected: false, name: row.name, noun: "pod", verb: "open a shell in",
+                             actionLabel: "Open shell", canRun: !container.isEmpty, content: {
+                    if containers.count > 1 {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HyLabel("Container")
+                            Picker("Container", selection: $container) {
+                                ForEach(containers, id: \.self) { Text($0).font(Hy.mono(13)).tag($0) }
+                            }
+                            .labelsHidden()
+                        }
+                    }
+                }, run: { try await MainActor.run { try open() } })
+            } else if let loadError {
+                ConfirmSheet(title: "Open a shell in \(row.name)?", context: row.context, namespace: row.namespace,
+                             consequence: Text(loadError), protected: false, name: row.name,
+                             actionLabel: "Open shell", canRun: false, run: {})
+            } else {
+                Color.clear.frame(width: 1, height: 1)
+            }
+        }
+        .task {
+            let p = PodContainersParams(context: row.context, namespace: namespace, name: row.name)
+            do {
+                let r: PodContainersResult = try await engine.request(Method.podContainers, p)
+                guard let first = r.containers.first else {
+                    loadError = "This pod has no containers to open a shell in."
+                    return
+                }
+                container = first
+                containers = r.containers
+                if !protected && r.containers.count == 1 {
+                    do { try open() } catch { loadError = error.localizedDescription; containers = nil; return }
+                    dismiss()
+                }
+            } catch {
+                loadError = error.localizedDescription
+            }
+        }
     }
 }
