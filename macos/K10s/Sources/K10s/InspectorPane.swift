@@ -36,7 +36,7 @@ struct InspectorPane: View {
             switch press.characters {
             case "d": tab.inspectorTab = .describe
             case "y": tab.inspectorTab = .yaml
-            case "e": tab.inspectorTab = .events
+            case "v": tab.inspectorTab = .events
             case "l": if isPod { tab.inspectorTab = .logs } else { return .ignored }
             default: return .ignored
             }
@@ -52,7 +52,7 @@ struct InspectorPane: View {
             HStack(spacing: Hy.s4) {
                 ForEach(tabs, id: \.self) { t in
                     Button { tab.inspectorTab = t } label: {
-                        Text(t.rawValue.capitalized)
+                        Text(t == .yaml && tab.editing ? "YAML · editing" : t.rawValue.capitalized)
                             .font(Hy.ui(13, 600))
                             .foregroundStyle(t == current ? Hy.starlight : Hy.dust)
                             .padding(.vertical, Hy.s2)
@@ -84,6 +84,8 @@ struct InspectorPane: View {
                 .frame(maxWidth: .infinity, alignment: .leading).padding(Hy.s4)
             }
             .task(id: "\(row.uid)|events") { await loadEvents(row) }
+        case .yaml where tab.editing:
+            YamlEditor(tab: tab, row: row)
         case .describe, .yaml:
             let yaml = current == .yaml
             ScrollView {
