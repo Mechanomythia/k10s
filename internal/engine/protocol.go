@@ -18,6 +18,7 @@ const (
 	MethodObjectYAML      = "object.yaml"
 	MethodObjectDescribe  = "object.describe"
 	MethodObjectEvents    = "object.events"
+	MethodObjectChildren  = "object.children"
 	MethodPodContainers   = "pod.containers"
 	MethodLogsSubscribe   = "logs.subscribe"
 	MethodObjectDelete    = "object.delete"
@@ -148,6 +149,10 @@ type TableSubscribeParams struct {
 	Namespace     string      `json:"namespace,omitempty"`
 	AllNamespaces bool        `json:"allNamespaces,omitempty"`
 	LabelSelector string      `json:"labelSelector,omitempty"`
+	// FieldSelector goes to the API server like LabelSelector. OwnerUID keeps
+	// the rows whose object has an owner reference with that uid.
+	FieldSelector string `json:"fieldSelector,omitempty"`
+	OwnerUID      string `json:"ownerUID,omitempty"`
 }
 
 // Health is the state behind a row's star glyph.
@@ -246,7 +251,7 @@ type ContainerStatus struct {
 	Restarts int    `json:"restarts"`
 }
 
-// ObjectParams are the params of object.yaml and object.describe.
+// ObjectParams are the params of object.yaml, object.describe and object.children.
 type ObjectParams struct {
 	Context   string      `json:"context"`
 	Resource  ResourceRef `json:"resource"`
@@ -257,6 +262,19 @@ type ObjectParams struct {
 // TextResult is the result of object.yaml and object.describe.
 type TextResult struct {
 	Text string `json:"text"`
+}
+
+// ChildrenResult is the result of object.children: the table.subscribe filters
+// that list a parent's children. Namespace is the parent's, or empty for every
+// namespace. None is true when the parent selects nothing (no selector), so the
+// app must not subscribe: an empty selector would list everything.
+type ChildrenResult struct {
+	Resource      ResourceRef `json:"resource"`
+	Namespace     string      `json:"namespace,omitempty"`
+	LabelSelector string      `json:"labelSelector,omitempty"`
+	FieldSelector string      `json:"fieldSelector,omitempty"`
+	OwnerUID      string      `json:"ownerUID,omitempty"`
+	None          bool        `json:"none,omitempty"`
 }
 
 // ObjectEventsParams are the params of object.events.

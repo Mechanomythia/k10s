@@ -26,8 +26,11 @@ type fakeAPI struct {
 	status   int             // if set, table lists answer this status as a Status object
 	listGate <-chan struct{} // if set, lists wait for it
 
-	mu   sync.Mutex
-	pods []fakePod
+	mu     sync.Mutex
+	pods   []fakePod
+	owners map[string]string // pod uid -> uid of its owner reference
+
+	fieldSelector atomic.Value // the fieldSelector query of the last list
 
 	lists, watches atomic.Int32
 	opened         chan struct{} // closed when the first watch opens
@@ -46,8 +49,12 @@ func newFake(t *testing.T, cols []string, pods ...fakePod) *fakeAPI {
 	return f
 }
 
-func podJSON(p fakePod) string {
-	return fmt.Sprintf(`{"apiVersion":"v1","kind":"Pod","metadata":{"name":%q,"namespace":%q,"uid":%q,"resourceVersion":"7"},"status":{"phase":%q}}`, p.name, p.ns, p.uid, p.phase)
+func (f *fakeAPI) podJSON(p fakePod) string {
+	owner := ""
+	if o := f.owners[p.uid]; o != "" {
+		owner = fmt.Sprintf(`"ownerReferences":[{"apiVersion":"apps/v1","kind":"ReplicaSet","name":"rs","uid":%q}],`, o)
+	}
+	return fmt.Sprintf(`{"apiVersion":"v1","kind":"Pod","metadata":{%s"name":%q,"namespace":%q,"uid":%q,"resourceVersion":"7"},"status":{"phase":%q}}`, owner, p.name, p.ns, p.uid, p.phase)
 }
 
 // table prints pods in f.cols, with column definitions when withCols.
@@ -72,7 +79,7 @@ func (f *fakeAPI) table(withCols bool, pods ...fakePod) string {
 				cells = append(cells, `"5m"`)
 			}
 		}
-		rows = append(rows, fmt.Sprintf(`{"cells":[%s],"object":%s}`, strings.Join(cells, ","), podJSON(p)))
+		rows = append(rows, fmt.Sprintf(`{"cells":[%s],"object":%s}`, strings.Join(cells, ","), f.podJSON(p)))
 	}
 	cols := ""
 	if withCols {
@@ -128,6 +135,7 @@ func (f *fakeAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		f.lists.Add(1)
+		f.fieldSelector.Store(r.URL.Query().Get("fieldSelector"))
 		if f.status != 0 {
 			w.WriteHeader(f.status)
 			fmt.Fprintf(w, `{"kind":"Status","apiVersion":"v1","status":"Failure","message":"pods is forbidden: nope","code":%d}`, f.status)
@@ -393,5 +401,61 @@ func TestTableRelistOnGone(t *testing.T) {
 	waitSignal(t, a.watchOpen, "new watch")
 	if a.lists.Load() != 2 || a.watches.Load() != 2 {
 		t.Errorf("%d lists, %d watches; want a re-list and a new watch", a.lists.Load(), a.watches.Load())
+	}
+}
+
+func TestTableFieldSelectorReachesServer(t *testing.T) {
+	a := newFake(t, []string{"Name"}, fakePod{"default", "web-1", "u1", "Running"})
+	tb := newTables(connsFor(t, map[string]string{"a": a.srv.URL}))
+	s := startSub(t, tb, TableSubscribeParams{Contexts: []string{"a"}, Resource: pods, AllNamespaces: true, FieldSelector: "spec.nodeName=n1"})
+	s.next(t, EventSnapshot)
+	if got := a.fieldSelector.Load(); got != "spec.nodeName=n1" {
+		t.Errorf("fieldSelector query = %v", got)
+	}
+	// The selector is part of the watch's key: another one is another watch.
+	s2 := startSub(t, tb, TableSubscribeParams{Contexts: []string{"a"}, Resource: pods, AllNamespaces: true, FieldSelector: "spec.nodeName=n2"})
+	s2.next(t, EventSnapshot)
+	if a.lists.Load() != 2 {
+		t.Errorf("%d lists, want one per field selector", a.lists.Load())
+	}
+}
+
+func TestTableOwnerFilter(t *testing.T) {
+	a := newFake(t, []string{"Name"},
+		fakePod{"default", "mine", "u1", "Running"}, fakePod{"default", "other", "u2", "Running"}, fakePod{"default", "orphan", "u3", "Running"})
+	a.owners = map[string]string{"u1": "job-1", "u2": "job-2"}
+	tb := newTables(connsFor(t, map[string]string{"a": a.srv.URL}))
+	s := startSub(t, tb, TableSubscribeParams{Contexts: []string{"a"}, Resource: pods, Namespace: "default", OwnerUID: "job-1"})
+	snap := s.next(t, EventSnapshot).(Snapshot)
+	if len(snap.Rows) != 1 || snap.Rows[0].Name != "mine" {
+		t.Fatalf("snapshot rows = %+v, want only mine", snap.Rows)
+	}
+	waitSignal(t, a.watchOpen, "watch")
+
+	// A deletion of a row that was never shown is ignored; a new owned row and
+	// a foreign one: only the owned one is sent.
+	a.send(t, "DELETED", fakePod{"default", "other", "u2", "Running"})
+	a.send(t, "ADDED", fakePod{"default", "foreign", "u4", "Pending"})
+	a.owners["u5"] = "job-1"
+	a.send(t, "ADDED", fakePod{"default", "new", "u5", "Pending"})
+	s.saw(t, func(g got) bool { u, ok := g.data.(Upsert); return ok && u.Row.Name == "new" })
+
+	// A MODIFIED row that lost its owner is removed.
+	a.mu.Lock()
+	delete(a.owners, "u1")
+	a.mu.Unlock()
+	a.send(t, "MODIFIED", fakePod{"default", "mine", "u1", "Running"})
+	s.saw(t, func(g got) bool { d, ok := g.data.(Delete); return ok && d.UID == "u1" })
+	for _, g := range s.log {
+		switch v := g.data.(type) {
+		case Upsert:
+			if v.Row.Name != "new" {
+				t.Errorf("upsert of %s passed the owner filter", v.Row.Name)
+			}
+		case Delete:
+			if v.UID != "u1" {
+				t.Errorf("delete of %s, never shown", v.Name)
+			}
+		}
 	}
 }

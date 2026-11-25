@@ -1,0 +1,1 @@
+{"resource":{"version":"v1","plural":"pods"},"namespace":"default","labelSelector":"app=web,tier in (a,b)"}

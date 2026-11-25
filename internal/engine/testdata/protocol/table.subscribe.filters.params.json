@@ -1,0 +1,1 @@
+{"contexts":["prod"],"resource":{"version":"v1","plural":"pods"},"allNamespaces":true,"fieldSelector":"spec.nodeName=node-1","ownerUID":"7d2c1f0e-5b1a-4c3e-9a55-0c1d2e3f4a5b"}
