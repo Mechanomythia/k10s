@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>k10s: pods with metrics</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="k10s.css">
+<link rel="stylesheet" href="ds/hyad/components/bundle.css">
+<script src="ds/hyad/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600&amp;family=Literata:opsz,wght@7..72,300;7..72,400&amp;family=Spline+Sans+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.f{width:1180px;height:520px;box-sizing:border-box;background:var(--sky);border:1px solid var(--neatline);font-family:var(--font-ui);color:var(--starlight)}
+.tbl td.k{color:var(--class-k)}
+.tbl td.m{color:var(--class-m)}
+.tbl th.r,.tbl td.r{text-align:right}
+.note{padding:12px 24px;font-size:12px;color:var(--faint)}
+</style>
+</helmet>
+<div class="f">
+  <div class="head"><h1>Pods</h1><span class="meta">42 in payments · watching · metrics every 15 s</span></div>
+  <table class="tbl">
+    <thead><tr><th aria-label="Health"></th><th>Name</th><th>Ready</th><th>Status</th><th>Restarts</th><th class="r">CPU</th><th class="r">%CPU/R</th><th class="r">%CPU/L</th><th class="r">Mem</th><th class="r">%MEM/R</th><th class="r">%MEM/L</th><th>Age</th></tr></thead>
+    <tbody>
+      <sc-for list="{{ rows }}" as="p" hint-placeholder-count="10">
+        <tr class="{{ p.cls }}">
+          <td><x-import component-from-global-scope="Hyad.Star" state="{{ p.state }}" size="{{ s12 }}" show-label="{{ no }}"></x-import></td>
+          <td>{{ p.name }}</td><td>{{ p.ready }}</td><td class="{{ p.stCls }}">{{ p.status }}</td><td>{{ p.rs }}</td>
+          <td class="r">{{ p.cpu }}</td><td class="r {{ p.cpuRCls }}">{{ p.cpuR }}</td><td class="r {{ p.cpuLCls }}">{{ p.cpuL }}</td>
+          <td class="r">{{ p.mem }}</td><td class="r {{ p.memRCls }}">{{ p.memR }}</td><td class="r {{ p.memLCls }}">{{ p.memL }}</td>
+          <td class="d">{{ p.age }}</td>
+        </tr>
+      </sc-for>
+    </tbody>
+  </table>
+  <div class="note">%/R is of the pod’s requests, %/L of its limits; “—” when the pod sets none. Orange from 80 %, red from 95 % of limits. Without metrics-server the columns show “n/a” once, in the header.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1180,"height":520}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = (state, name, ready, status, rs, cpu, cpuR, cpuL, mem, memR, memL, age, o) => Object.assign({ state, name, ready, status, rs, cpu, cpuR, cpuL, mem, memR, memL, age, cls: '', stCls: '', cpuRCls: '', cpuLCls: '', memRCls: '', memLCls: '' }, o || {});
+    return {
+      no: false, s12: 12,
+      rows: [
+        P('live', 'checkout-api-7d9f8b6c4-x2kqp', '2/2', 'Running', '0', '412m', '82 %', '41 %', '388Mi', '76 %', '76 %', '3h12m', { cpuRCls: 'k' }),
+        P('live', 'checkout-api-7d9f8b6c4-m8wzt', '2/2', 'Running', '0', '377m', '75 %', '38 %', '371Mi', '72 %', '72 %', '3h12m'),
+        P('failed', 'ledger-worker-5c6b9d7f8-kd2lp', '0/1', 'CrashLoopBackOff', '14', '0m', '0 %', '0 %', '12Mi', '5 %', '2 %', '52m', { stCls: 'm' }),
+        P('degraded', 'ledger-worker-5c6b9d7f8-r7tnx', '1/1', 'Running', '3', '640m', '128 %', '64 %', '498Mi', '97 %', '97 %', '52m', { cpuRCls: 'k', memRCls: 'm', memLCls: 'm' }),
+        P('live', 'payments-gateway-6f8d5c9b7-2xjqs', '2/2', 'Running', '0', '91m', '36 %', '18 %', '204Mi', '40 %', '20 %', '2d4h'),
+        P('live', 'redis-payments-0', '1/1', 'Running', '0', '38m', '—', '—', '1.1Gi', '—', '—', '34d'),
+        P('live', 'webhook-relay-6b5f9d8c7-pq3ns', '1/1', 'Running', '0', '12m', '12 %', '6 %', '64Mi', '50 %', '25 %', '9d'),
+        P('stopped', 'invoice-export-29105760-8gq2c', '0/1', 'Completed', '0', '—', '—', '—', '—', '—', '—', '41m')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

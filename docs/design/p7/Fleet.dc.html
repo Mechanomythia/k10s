@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>k10s: fleet overview</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="k10s.css">
+<link rel="stylesheet" href="ds/hyad/components/bundle.css">
+<script src="ds/hyad/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600&amp;family=Literata:opsz,wght@7..72,300;7..72,400&amp;family=Spline+Sans+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.tbl td.k{color:var(--class-k)}
+.tbl td.m{color:var(--class-m)}
+.tbl td.z{color:var(--faint)}
+.tbl td a{color:inherit;text-decoration:none;border-bottom:1px dotted var(--neatline-strong)}
+.tot td{font-weight:600;border-top:1px solid var(--neatline-strong)}
+.legend{display:flex;gap:24px;padding:12px 24px;font-size:12px;color:var(--faint)}
+</style>
+</helmet>
+<div class="win">
+  <div class="toolbar">
+    <div class="lights" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="scope"><span class="label">Set</span><span class="ctx">all · 25 contexts</span></div>
+    <div class="sep"></div>
+    <input class="filter" type="text" aria-label="Filter" placeholder="/ filter clusters">
+    <div class="grow"></div>
+    <span class="kbd">:</span><span style="color: var(--dust); font-size: 12px;">command</span>
+  </div>
+  <nav class="tabs" aria-label="Tabs">
+    <a class="tab on" href="#"><x-import component-from-global-scope="Hyad.Star" state="degraded" size="{{ s9 }}" show-label="{{ no }}"></x-import>all · 25 clusters<span class="n">⌘1</span></a>
+    <a class="tab" href="#"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s9 }}" show-label="{{ no }}"></x-import>remote-access-eu (dev)<span class="n">⌘2</span></a>
+    <a class="tab add" href="#">New tab ⌘T</a>
+  </nav>
+  <div class="body">
+    <nav class="side" aria-label="Kinds">
+      <a class="on" href="#">Overview<span class="c"></span></a>
+      <span class="label">Workloads</span>
+      <a href="#">Pods<span class="c">4,812</span></a>
+      <a href="#">Deployments<span class="c">611</span></a>
+      <a href="#">StatefulSets<span class="c">74</span></a>
+      <a href="#">DaemonSets<span class="c">139</span></a>
+      <span class="label">Cluster</span>
+      <a href="#">Nodes<span class="c">263</span></a>
+      <a href="#">Events<span class="c"></span></a>
+    </nav>
+    <section class="list">
+      <div class="head">
+        <h1>Overview</h1>
+        <span class="meta">22 of 25 clusters answer · updated 4 s ago</span>
+      </div>
+      <table class="tbl">
+        <thead><tr><th aria-label="State"></th><th>Context</th><th>Version</th><th>Nodes</th><th>CPU</th><th>Memory</th><th>Pods</th><th>Failing pods</th><th>Degraded</th><th>Workloads not ready</th><th>Warnings 1 h</th></tr></thead>
+        <tbody>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="14">
+            <tr class="{{ r.cls }}">
+              <td><x-import component-from-global-scope="Hyad.Star" state="{{ r.state }}" size="{{ s12 }}" show-label="{{ no }}"></x-import></td>
+              <td>{{ r.ctx }}</td>
+              <td class="d">{{ r.ver }}</td>
+              <td class="{{ r.nodesCls }}">{{ r.nodes }}</td>
+              <td class="{{ r.cpuCls }}">{{ r.cpu }}</td>
+              <td class="{{ r.memCls }}">{{ r.mem }}</td>
+              <td class="d">{{ r.pods }}</td>
+              <td class="{{ r.failCls }}">{{ r.fail }}</td>
+              <td class="{{ r.degCls }}">{{ r.deg }}</td>
+              <td class="{{ r.wlCls }}">{{ r.wl }}</td>
+              <td class="{{ r.warnCls }}">{{ r.warn }}</td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+      <div class="legend">
+        <span>CPU and memory: used / allocatable, from metrics-server.</span>
+        <span>Orange from 80 %, red from 95 %.</span>
+        <span>Click a number to open that list in a new tab.</span>
+      </div>
+    </section>
+  </div>
+  <footer class="status">
+    <span><span class="kbd">↵</span> open cluster</span>
+    <span><span class="kbd">/</span> filter</span>
+    <span><span class="kbd">:</span> command</span>
+    <span class="r">all · 25 contexts · read-only overview</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const z = 'z', k = 'k', m = 'm';
+    const R = (state, ctx, ver, nodes, cpu, mem, pods, fail, deg, wl, warn, o) => Object.assign({
+      state, ctx, ver, nodes, cpu, mem, pods, fail, deg, wl, warn,
+      cls: '', nodesCls: '', cpuCls: '', memCls: '',
+      failCls: fail === '0' ? z : m, degCls: deg === '0' ? z : k, wlCls: wl === '0' ? z : k, warnCls: warn === '0' ? z : 'd'
+    }, o || {});
+    return {
+      no: false, s9: 9, s12: 12,
+      rows: [
+        R('live', 'gke_cl-dev_europe-west4_kvasir', 'v1.33.4', '6/6', '41 %', '58 %', '212', '0', '1', '0', '3'),
+        R('live', 'gke_cl-dev_us-east1_jackson', 'v1.33.4', '6/6', '37 %', '52 %', '198', '0', '0', '0', '0'),
+        R('degraded', 'gke_cl-portal_europe-west4_loki', 'v1.32.8', '9/9', '83 %', '71 %', '402', '2', '3', '1', '17', { cpuCls: k }),
+        R('live', 'gke_cl-portal_us-east1_carter', 'v1.32.8', '9/9', '64 %', '66 %', '388', '0', '0', '0', '2'),
+        R('live', 'gke_cl-system_europe-west4_hermiod', 'v1.33.4', '4/4', '22 %', '40 %', '96', '0', '0', '0', '0'),
+        R('failed', 'gke_cl-system_us-east1_hammond', '—', '—', '—', '—', '—', '—', '—', '—', '—', { failCls: z, degCls: z, wlCls: z, warnCls: z }),
+        R('live', 'gke_hue-core-infra-dev_europe-west4_crossplane-dev', 'v1.33.4', '3/3', '18 %', '34 %', '71', '0', '0', '0', '0'),
+        R('live', 'gke_hue-core-infra-prod_europe-west4_crossplane-prod', 'v1.33.4', '3/3', '24 %', '39 %', '73', '0', '0', '0', '1'),
+        R('degraded', 'gke_hue-resources-dev_europe-west4_remote-access-eu', 'v1.33.4', '12/12', '58 %', '96 %', '544', '1', '0', '0', '9', { memCls: m }),
+        R('live', 'gke_hue-resources-prod_europe-west4_remote-access-eu', 'v1.33.4', '18/18', '71 %', '74 %', '812', '0', '2', '0', '6'),
+        R('degraded', 'gke_hue-resources-prod_us-east1_remote-access-us', 'v1.33.4', '15/16', '76 %', '69 %', '701', '0', '1', '1', '11', { nodesCls: k }),
+        R('failed', 'gke_meethue-live_europe-west4_thor', '—', '—', '—', '—', '—', '—', '—', '—', '—', { failCls: z, degCls: z, wlCls: z, warnCls: z }),
+        R('live', 'gke_meethue-live_us-east1_oneill', 'v1.32.8', '24/24', '62 %', '59 %', '1,016', '0', '0', '0', '4'),
+        R('live', 'orbstack', 'v1.31.2', '1/1', '9 %', '31 %', '14', '0', '0', '0', '0')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
