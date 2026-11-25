@@ -126,16 +126,45 @@ public final class EngineClient {
         let gen = generation
         process = p
         stdin = inPipe.fileHandleForWriting
-        Task {
-            do {
-                for try await line in errPipe.fileHandleForReading.bytes.lines { log.info("\(line, privacy: .private)") }
-            } catch {}
+        // FileHandle.bytes on a pipe hands data over in large chunks (often only at EOF), so a
+        // reply from a long-running engine could sit in the buffer forever. Read what is there
+        // as soon as it arrives instead, and deliver complete lines in order on the main thread.
+        readLines(errPipe.fileHandleForReading) { line in log.info("\(line, privacy: .private)") }
+        readLines(outPipe.fileHandleForReading, onEnd: { [weak self] in self?.exited(gen) }) { [weak self] line in
+            guard let self, gen == self.generation else { return }
+            self.handle(line)
         }
-        Task {
-            do {
-                for try await line in outPipe.fileHandleForReading.bytes.lines where gen == generation { handle(line) }
-            } catch {}
-            exited(gen) // stdout closed: the engine is gone
+    }
+
+    /// Splits a pipe into lines as data arrives; `onLine` and `onEnd` run on the main actor, in order.
+    private func readLines(_ handle: FileHandle,
+                           onEnd: @escaping @MainActor () -> Void = {},
+                           onLine: @escaping @MainActor (String) -> Void) {
+        var buffer = Data()
+        handle.readabilityHandler = { fh in
+            let chunk = fh.availableData
+            if chunk.isEmpty { // EOF
+                fh.readabilityHandler = nil
+                let rest = buffer.isEmpty ? nil : String(decoding: buffer, as: UTF8.self)
+                buffer.removeAll()
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated {
+                        if let rest { onLine(rest) }
+                        onEnd()
+                    }
+                }
+                return
+            }
+            buffer.append(chunk)
+            var lines: [String] = []
+            while let nl = buffer.firstIndex(of: 0x0A) {
+                lines.append(String(decoding: buffer[buffer.startIndex..<nl], as: UTF8.self))
+                buffer.removeSubrange(buffer.startIndex...nl)
+            }
+            guard !lines.isEmpty else { return }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { for line in lines { onLine(line) } }
+            }
         }
     }
 
