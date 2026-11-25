@@ -5,6 +5,8 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 ROOT=$(pwd)
 VERSION=${VERSION:-0.1.0}
+# CFBundleVersion: a build number that only goes up (CI run number); Sparkle compares this.
+BUILD=${BUILD:-1}
 DIST="$ROOT/dist"
 APP="$DIST/K10s.app"
 rm -rf "$APP" && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/bin"
@@ -22,7 +24,7 @@ echo "==> Swift app (universal)"
 ( cd macos/K10s && swift build -c release --product K10s --arch arm64 --arch x86_64 )
 BIN=$(cd macos/K10s && swift build -c release --product K10s --arch arm64 --arch x86_64 --show-bin-path)
 cp "$BIN/K10s" "$APP/Contents/MacOS/K10s"
-sed "s/__VERSION__/$VERSION/g" macos/K10s/Info.plist > "$APP/Contents/Info.plist"
+sed -e "s/__VERSION__/$VERSION/g" -e "s/__BUILD__/$BUILD/g" macos/K10s/Info.plist > "$APP/Contents/Info.plist"
 
 echo "==> Sparkle.framework"
 FW_SRC="$BIN/Sparkle.framework"

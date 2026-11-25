@@ -14,7 +14,7 @@ import (
 const usage = `k10s-release <command>   release tooling (Sparkle auto-update signing)
 
   sparkle-pubkey                 print SUPublicEDKey for $SPARKLE_ED_PRIVATE_KEY
-  appcast --version V --url U --file F [--notes URL] [--out appcast.xml]
+  appcast --version BUILD [--short-version V] --url U --file F [--notes URL] [--out appcast.xml]
 `
 
 func main() {
@@ -51,7 +51,8 @@ func run(args []string) error {
 		return nil
 	case "appcast":
 		fs := flag.NewFlagSet("appcast", flag.ExitOnError)
-		version := fs.String("version", "", "version (CFBundleVersion)")
+		version := fs.String("version", "", "build number Sparkle compares (CFBundleVersion)")
+		short := fs.String("short-version", "", "version shown to people (CFBundleShortVersionString)")
 		url := fs.String("url", "", "download URL of the archive")
 		file := fs.String("file", "", "the archive (signed and measured)")
 		notes := fs.String("notes", "", "release notes URL")
@@ -69,7 +70,7 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		x, err := sparkle.Appcast("K10s", sparkle.Item{Version: *version, URL: *url, Length: n, EdSignature: sig,
+		x, err := sparkle.Appcast("K10s", sparkle.Item{Version: *version, ShortVersion: *short, URL: *url, Length: n, EdSignature: sig,
 			ReleaseNotesURL: *notes, MinimumSystem: "14.0"})
 		if err != nil {
 			return err
