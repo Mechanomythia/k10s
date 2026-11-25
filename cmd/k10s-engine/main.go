@@ -11,6 +11,9 @@ import (
 	"github.com/mechanomythia/k10s/internal/engine"
 )
 
+// Version is set at build time with -ldflags -X main.Version=...
+var Version = "dev"
+
 func main() {
 	log.SetFlags(log.LstdFlags)
 	log.SetOutput(os.Stderr)
