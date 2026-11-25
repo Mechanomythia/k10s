@@ -111,3 +111,15 @@ struct EmptyKindView: View {
         }
     }
 }
+
+/// A parent whose selector matches nothing: there is no list to watch.
+struct SelectsNoneView: View {
+    let kind: KindEntry
+
+    var body: some View {
+        StatePane {
+            StateTitle("Selects no \(kind.plural)")
+            StateText(text: Text("Its selector is empty, so k10s does not list \(kind.plural) for it."))
+        }
+    }
+}

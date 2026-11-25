@@ -24,7 +24,7 @@ struct YamlEditor: View {
     }
 
     private var params: ObjectParams {
-        ObjectParams(context: row.context, resource: tab.kind?.ref ?? ResourceRef(version: "v1", plural: "pods"),
+        ObjectParams(context: row.context, resource: tab.activeKind?.ref ?? ResourceRef(version: "v1", plural: "pods"),
                      namespace: row.namespace, name: row.name)
     }
 
@@ -62,7 +62,7 @@ struct YamlEditor: View {
                          consequence: Text("Your edits replace ")
                             + Text(row.name).font(Hy.mono(13.5)).foregroundColor(Hy.starlight)
                             + Text(" in the cluster."),
-                         protected: true, name: row.name, noun: tab.kind?.noun ?? "object",
+                         protected: true, name: row.name, noun: tab.activeKind?.noun ?? "object",
                          verb: "save", actionLabel: "Save") {
                 await perform(anyway: anyway)
             }
