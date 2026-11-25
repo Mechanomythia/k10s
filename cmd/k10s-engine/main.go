@@ -6,6 +6,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	"github.com/mechanomythia/k10s/internal/engine"
 )
@@ -13,7 +14,22 @@ import (
 func main() {
 	log.SetFlags(log.LstdFlags)
 	log.SetOutput(os.Stderr)
-	if err := engine.New().Serve(context.Background(), os.Stdin, os.Stdout); err != nil {
+	engine.LoadLoginEnv(engine.LoginShell, 5*time.Second)
+	kube := engine.NewKubeconfig()
+	conns := engine.NewConns(kube) // later tickets set conns.OnState and call conns.Get
+	ctx := context.Background()
+	if changed, err := kube.Watch(ctx); err != nil {
+		log.Printf("k10s-engine: kubeconfig watch: %v", err)
+	} else {
+		go func() {
+			for range changed {
+				conns.Reset()
+			}
+		}()
+	}
+	s := engine.New()
+	kube.Register(s)
+	if err := s.Serve(ctx, os.Stdin, os.Stdout); err != nil {
 		log.Fatalf("k10s-engine: %v", err)
 	}
 }
