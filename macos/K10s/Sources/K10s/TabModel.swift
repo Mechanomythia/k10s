@@ -57,9 +57,10 @@ final class TabModel {
     @ObservationIgnored private var namespaceInitialized = false
 
     init(scope: TabScope) {
+        var table = TableModel(contexts: scope.contexts)
+        table.healthFilter = scope.health
         self.scope = scope
-        self.table = TableModel(contexts: scope.contexts)
-        self.table.healthFilter = scope.health
+        self.table = table
         self.showingOverview = scope.overview ?? (scope.contexts.count > 1)
     }
 
