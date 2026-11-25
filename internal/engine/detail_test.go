@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -416,6 +417,42 @@ func TestPodContainers(t *testing.T) {
 	}
 	if err := call(t, d.podContainers, PodContainersParams{Context: "c", Namespace: "ns", Name: "nope"}, nil); err == nil {
 		t.Error("unknown pod: want error")
+	}
+}
+
+func TestPodContainerStatuses(t *testing.T) {
+	pod := podWith("run", "crash", "done", "failed", "fresh")
+	for i := range pod.Spec.Containers {
+		pod.Spec.Containers[i].Image = pod.Spec.Containers[i].Name + ":1"
+	}
+	pod.Spec.InitContainers = []corev1.Container{{Name: "init-db", Image: "db:1"}}
+	st := func(name string, ready bool, restarts int32, s corev1.ContainerState) corev1.ContainerStatus {
+		return corev1.ContainerStatus{Name: name, Ready: ready, RestartCount: restarts, State: s}
+	}
+	pod.Status.ContainerStatuses = []corev1.ContainerStatus{
+		st("run", true, 0, corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}),
+		st("crash", false, 7, corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{Reason: "CrashLoopBackOff"}}),
+		st("done", false, 0, corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{Reason: "Completed"}}),
+		st("failed", false, 1, corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{Reason: "Error"}}),
+	}
+	pod.Status.InitContainerStatuses = []corev1.ContainerStatus{
+		st("init-db", true, 0, corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{Reason: "Completed"}}),
+	}
+	d := detailEnv(t, nil, kfake.NewSimpleClientset(pod), nil)
+	var res PodContainersResult
+	if err := call(t, d.podContainers, PodContainersParams{Context: "c", Namespace: "ns", Name: "p"}, &res); err != nil {
+		t.Fatal(err)
+	}
+	want := []ContainerStatus{
+		{Name: "run", Image: "run:1", Ready: true, State: "Running"},
+		{Name: "crash", Image: "crash:1", State: "Waiting: CrashLoopBackOff", Restarts: 7},
+		{Name: "done", Image: "done:1", State: "Terminated: Completed"},
+		{Name: "failed", Image: "failed:1", State: "Terminated: Error", Restarts: 1},
+		{Name: "fresh", Image: "fresh:1", State: "Waiting"},
+		{Name: "init-db", Init: true, Image: "db:1", Ready: true, State: "Terminated: Completed"},
+	}
+	if !reflect.DeepEqual(res.Statuses, want) {
+		t.Errorf("statuses = %+v", res.Statuses)
 	}
 }
 
