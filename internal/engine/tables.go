@@ -17,6 +17,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	utiljson "k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/rest"
 )
 
@@ -59,6 +60,17 @@ type watchKey struct {
 	resource  ResourceRef
 	namespace string // "" for every namespace or a cluster-scoped kind
 	selector  string
+	field     string // field selector; engine-internal (the overview's Warning events)
+}
+
+// watchSub is what joins a shared watch: a table subscription, or an
+// overview's per-kind aggregation. The watch calls it under its lock.
+type watchSub interface {
+	reset(name string, cols []Column, rows map[string]Row)
+	relayout(name string, cols []Column, rows map[string]Row)
+	upsert(name string, cols []Column, r Row)
+	remove(r Row)
+	forbidden(name, msg string)
 }
 
 func (t *Tables) subscribe(ctx context.Context, params json.RawMessage) (func(Emit), error) {
@@ -75,7 +87,7 @@ func (t *Tables) subscribe(ctx context.Context, params json.RawMessage) (func(Em
 		stop := t.conns.Listen(s.state)
 		var ws []*sharedWatch
 		for _, name := range p.Contexts {
-			w := t.acquire(watchKey{name, p.Resource, ns, p.LabelSelector})
+			w := t.acquire(watchKey{context: name, resource: p.Resource, namespace: ns, selector: p.LabelSelector})
 			w.join(s)
 			ws = append(ws, w)
 		}
@@ -100,7 +112,7 @@ func (t *Tables) acquire(k watchKey) *sharedWatch {
 	w := t.watches[k]
 	if w == nil {
 		ctx, cancel := context.WithCancel(context.Background())
-		w = &sharedWatch{key: k, conns: t.conns, cancel: cancel, subs: map[*tableSub]bool{}}
+		w = &sharedWatch{key: k, conns: t.conns, cancel: cancel, subs: map[watchSub]bool{}}
 		if k.resource.Group == "" && k.resource.Version == "v1" && (k.resource.Plural == "pods" || k.resource.Plural == "nodes") {
 			w.nodes = k.resource.Plural == "nodes"
 			if w.nodes {
@@ -153,7 +165,7 @@ type sharedWatch struct {
 	rv   string
 
 	mu      sync.Mutex // guards the rest; held while calling subscribers, so they see events in order
-	subs    map[*tableSub]bool
+	subs    map[watchSub]bool
 	listed  bool
 	denied  string // the last 403 message, until a list succeeds
 	columns []Column
@@ -231,7 +243,7 @@ func (w *sharedWatch) metricsTick() {
 	}
 }
 
-func (w *sharedWatch) join(s *tableSub) {
+func (w *sharedWatch) join(s watchSub) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.subs[s] = true
@@ -243,7 +255,7 @@ func (w *sharedWatch) join(s *tableSub) {
 	}
 }
 
-func (w *sharedWatch) leave(s *tableSub) {
+func (w *sharedWatch) leave(s watchSub) {
 	w.mu.Lock()
 	delete(w.subs, s)
 	w.mu.Unlock()
@@ -410,6 +422,9 @@ func (w *sharedWatch) open(ctx context.Context, q url.Values) (io.ReadCloser, er
 	if w.key.selector != "" {
 		q.Set("labelSelector", w.key.selector)
 	}
+	if w.key.field != "" {
+		q.Set("fieldSelector", w.key.field)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, w.base+"?"+q.Encode(), nil)
 	if err != nil {
 		return nil, err
@@ -457,7 +472,7 @@ func (w *sharedWatch) path() string {
 // the object's resource version and, for pods and nodes, its capacity.
 func (w *sharedWatch) row(r metav1.TableRow) (Row, string, capacity) {
 	obj := &unstructured.Unstructured{}
-	_ = json.Unmarshal(r.Object.Raw, &obj.Object)
+	_ = utiljson.Unmarshal(r.Object.Raw, &obj.Object) // integers as int64, as HealthOf's Nested* reads expect
 	cells := make([]string, len(r.Cells))
 	for i, c := range r.Cells {
 		if c != nil {
@@ -477,6 +492,7 @@ func (w *sharedWatch) row(r metav1.TableRow) (Row, string, capacity) {
 		UID:       string(obj.GetUID()),
 		Cells:     cells,
 		Health:    HealthOf(obj, time.Now()),
+		facts:     factsOf(w.key.resource, obj.Object),
 	}, obj.GetResourceVersion(), c
 }
 
@@ -622,6 +638,7 @@ func (s *tableSub) fit(cols []Column, r Row) Row {
 		}
 	}
 	r.Cells = cells
+	r.facts = nil
 	return r
 }
 
