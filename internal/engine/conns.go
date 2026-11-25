@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -24,6 +25,8 @@ type Conn struct {
 
 	probe sync.Mutex // serialises probing
 	live  bool
+	// Version is the cluster gitVersion from the /version probe, set once live.
+	Version string
 }
 
 // Conns holds the connections by context name. Nothing connects at start:
@@ -89,7 +92,7 @@ func (c *Conns) Get(ctx context.Context, name string) (*Conn, error) {
 		if err != nil {
 			c.mu.Unlock()
 			msg := fmt.Sprintf("context %q: %s", name, redact(err.Error()))
-			c.state(name, StateUnreachable, msg)
+			c.state(name, StateUnreachable, msg, "")
 			return nil, errors.New(msg)
 		}
 		cn = &Conn{Name: name, Config: cfg, Discovery: memory.NewMemCacheClient(dc)}
@@ -102,25 +105,33 @@ func (c *Conns) Get(ctx context.Context, name string) (*Conn, error) {
 	if cn.live {
 		return cn, nil
 	}
-	c.state(name, StateConnecting, "")
-	err := cn.Discovery.RESTClient().Get().AbsPath("/version").Do(ctx).Error()
+	c.state(name, StateConnecting, "", "")
+	raw, err := cn.Discovery.RESTClient().Get().AbsPath("/version").Do(ctx).Raw()
 	if err != nil {
 		st := classify(err)
 		msg := redact(err.Error())
-		c.state(name, st, msg)
+		c.state(name, st, msg, "")
 		return nil, errors.New(msg)
 	}
+	var v struct {
+		GitVersion string `json:"gitVersion"`
+	}
+	_ = json.Unmarshal(raw, &v)
 	cn.live = true
-	c.state(name, StateLive, "")
+	cn.Version = v.GitVersion
+	c.state(name, StateLive, "", v.GitVersion)
 	return cn, nil
 }
 
 // state broadcasts a transition to the listeners, unless it repeats the
 // context's last state.
-func (c *Conns) state(name string, st ContextState, msg string) {
-	ch := ContextStateChange{Context: name, State: st, Error: msg}
+func (c *Conns) state(name string, st ContextState, msg, version string) {
 	c.lmu.Lock()
 	defer c.lmu.Unlock()
+	if st == StateLive && version == "" {
+		version = c.last[name].Version // table watches re-report live without it
+	}
+	ch := ContextStateChange{Context: name, State: st, Error: msg, Version: version}
 	if c.last[name] == ch {
 		return
 	}

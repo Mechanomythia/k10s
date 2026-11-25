@@ -36,6 +36,7 @@ func (d *Detail) Register(s *Server) {
 	s.Handlers[MethodObjectYAML] = d.yaml
 	s.Handlers[MethodObjectDescribe] = d.describe
 	s.Handlers[MethodObjectEvents] = d.events
+	s.Handlers[MethodPodContainers] = d.podContainers
 	s.Subs[MethodLogsSubscribe] = d.logs
 }
 
@@ -102,6 +103,36 @@ func (d *Detail) yaml(ctx context.Context, raw json.RawMessage) (any, error) {
 		return nil, err
 	}
 	return TextResult{Text: string(out)}, nil
+}
+
+func (d *Detail) podContainers(ctx context.Context, raw json.RawMessage) (any, error) {
+	var p PodContainersParams
+	if err := decode(raw, &p); err != nil {
+		return nil, err
+	}
+	if p.Context == "" || p.Namespace == "" || p.Name == "" {
+		return nil, invalid("context, namespace and name are required")
+	}
+	cn, err := d.Conns.Get(ctx, p.Context)
+	if err != nil {
+		return nil, err
+	}
+	cs, err := d.clientset(cn.Config)
+	if err != nil {
+		return nil, err
+	}
+	pod, err := cs.CoreV1().Pods(p.Namespace).Get(ctx, p.Name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	res := PodContainersResult{Containers: []string{}, InitContainers: []string{}}
+	for _, c := range pod.Spec.Containers {
+		res.Containers = append(res.Containers, c.Name)
+	}
+	for _, c := range pod.Spec.InitContainers {
+		res.InitContainers = append(res.InitContainers, c.Name)
+	}
+	return res, nil
 }
 
 func (d *Detail) describe(ctx context.Context, raw json.RawMessage) (any, error) {

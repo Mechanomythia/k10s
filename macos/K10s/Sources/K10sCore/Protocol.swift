@@ -12,6 +12,7 @@ public enum Method {
     public static let objectYAML = "object.yaml"
     public static let objectDescribe = "object.describe"
     public static let objectEvents = "object.events"
+    public static let podContainers = "pod.containers"
     public static let logsSubscribe = "logs.subscribe"
     public static let unsubscribe = "unsubscribe"
 }
@@ -218,6 +219,19 @@ public struct ContextStateChange: Codable {
     public let context: String
     public let state: ContextState
     public var error: String?
+    /// Cluster gitVersion; present when the state is live.
+    public var version: String?
+}
+
+public struct PodContainersParams: Codable {
+    public let context: String
+    public let namespace: String
+    public let name: String
+}
+
+public struct PodContainersResult: Codable {
+    public let containers: [String]
+    public let initContainers: [String]
 }
 
 public struct ObjectParams: Codable {

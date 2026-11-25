@@ -25,6 +25,8 @@ final class ProtocolTests: XCTestCase {
         "object.events.result.json": codec(ObjectEventsResult.self),
         "object.yaml.params.json": codec(ObjectParams.self),
         "object.yaml.result.json": codec(TextResult.self),
+        "pod.containers.params.json": codec(PodContainersParams.self),
+        "pod.containers.result.json": codec(PodContainersResult.self),
         "resources.list.params.json": codec(ResourcesListParams.self),
         "resources.list.result.json": codec(ResourcesListResult.self),
         "subscribe.result.json": codec(SubscribeResult.self),

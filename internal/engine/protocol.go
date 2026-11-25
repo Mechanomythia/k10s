@@ -18,6 +18,7 @@ const (
 	MethodObjectYAML     = "object.yaml"
 	MethodObjectDescribe = "object.describe"
 	MethodObjectEvents   = "object.events"
+	MethodPodContainers  = "pod.containers"
 	MethodLogsSubscribe  = "logs.subscribe"
 	MethodUnsubscribe    = "unsubscribe"
 )
@@ -207,7 +208,22 @@ const (
 type ContextStateChange struct {
 	Context string       `json:"context"`
 	State   ContextState `json:"state"`
-	Error   string       `json:"error,omitempty"` // set for unreachable and unauthorized
+	Error   string       `json:"error,omitempty"`   // set for unreachable and unauthorized
+	Version string       `json:"version,omitempty"` // set for live: the cluster's gitVersion from /version
+}
+
+// PodContainersParams are the params of pod.containers.
+type PodContainersParams struct {
+	Context   string `json:"context"`
+	Namespace string `json:"namespace"`
+	Name      string `json:"name"`
+}
+
+// PodContainersResult is the result of pod.containers: the container names
+// from the pod spec, in spec order; both lists are always present.
+type PodContainersResult struct {
+	Containers     []string `json:"containers"`
+	InitContainers []string `json:"initContainers"`
 }
 
 // ObjectParams are the params of object.yaml and object.describe.
