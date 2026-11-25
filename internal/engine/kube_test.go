@@ -45,7 +45,7 @@ func writeKube(t *testing.T, path, current string, ctxs map[string]string, serve
 }
 
 func TestParseEnv0(t *testing.T) {
-	env := parseEnv0([]byte("PATH=/a:/b\x00MULTI=one\ntwo\x00EMPTY=\x00KUBECONFIG=/x=y\x00"))
+	env := parseEnv0([]byte("welcome\nmotd\x00K10S_ENV_BEGIN\x00PATH=/a:/b\x00MULTI=one\ntwo\x00EMPTY=\x00KUBECONFIG=/x=y\x00"))
 	if env["PATH"] != "/a:/b" || env["MULTI"] != "one\ntwo" || env["KUBECONFIG"] != "/x=y" {
 		t.Errorf("got %q", env)
 	}
@@ -56,7 +56,7 @@ func TestLoadLoginEnv(t *testing.T) {
 		t.Setenv("PATH", "/orig")
 		t.Setenv("KUBECONFIG", "")
 		LoadLoginEnv(func(context.Context, string) ([]byte, error) {
-			return []byte("PATH=/shell/bin\x00KUBECONFIG=/k1:/k2\x00"), nil
+			return []byte("noise\x00K10S_ENV_BEGIN\x00PATH=/shell/bin\x00KUBECONFIG=/k1:/k2\x00"), nil
 		}, time.Second)
 		if os.Getenv("PATH") != "/shell/bin" || os.Getenv("KUBECONFIG") != "/k1:/k2" {
 			t.Errorf("PATH=%q KUBECONFIG=%q", os.Getenv("PATH"), os.Getenv("KUBECONFIG"))
@@ -92,6 +92,29 @@ func TestIrisPathsFiltered(t *testing.T) {
 	mine := filepath.Join(home, "mine")
 	t.Setenv("KUBECONFIG", iris+string(os.PathListSeparator)+mine)
 	if got := NewKubeconfig().paths; len(got) != 1 || got[0] != mine {
+		t.Errorf("paths = %v", got)
+	}
+}
+
+func TestIrisPathsFilteredRelativeAndSymlink(t *testing.T) {
+	home := isolate(t)
+	irisDir := filepath.Join(home, ".local/share/iris/claude")
+	if err := os.MkdirAll(irisDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(home, "link")
+	if err := os.Symlink(filepath.Join(irisDir, "kubeconfig"), link); err != nil {
+		t.Fatal(err)
+	}
+	dirLink := filepath.Join(home, "dirlink")
+	if err := os.Symlink(irisDir, dirLink); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(home)
+	rel := filepath.Join(".local/share/iris/claude", "x")
+	t.Setenv("KUBECONFIG", strings.Join([]string{link, filepath.Join(dirLink, "y"), rel, "../" + filepath.Base(home) + "/" + rel, "ok"}, string(os.PathListSeparator)))
+	got := NewKubeconfig().paths
+	if len(got) != 1 || filepath.Base(got[0]) != "ok" {
 		t.Errorf("paths = %v", got)
 	}
 }
