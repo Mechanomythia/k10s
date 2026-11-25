@@ -1,0 +1,194 @@
+<title>k10s logo concepts</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;600;700&family=Literata:opsz,wght@7..72,400;7..72,500&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column of concept rows; each row = large icon tile, small sizes, lockup, rationale. Single dark look: the hyad night theme the app uses. */
+:root {
+  color-scheme: dark;
+  --sky: #0a0e13;
+  --sky-raised: #10161d;
+  --sky-high: #18212b;
+  --neatline: #27323f;
+  --neatline-strong: #66788c;
+  --starlight: #ece7dd;
+  --dust: #a3aebb;
+  --faint: #7d8997;
+  --class-a: #bdd1ff;
+  --class-g: #f1e1b0;
+  --class-k: #f2a660;
+  --class-m: #f4806c;
+  --ui: "Commissioner", "Helvetica Neue", Arial, sans-serif;
+  --mono: "Spline Sans Mono", ui-monospace, Menlo, monospace;
+  --display: "Literata", Georgia, serif;
+}
+body { background: var(--sky); color: var(--starlight); font-family: var(--ui); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 40px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: grid; gap: 8px; margin-bottom: 32px; }
+h1 { font-family: var(--display); font-weight: 400; font-size: 34px; margin: 0; text-wrap: balance; }
+header p { color: var(--dust); margin: 0; max-width: 64ch; }
+.label { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.concept { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 28px; padding-block: 28px; border-top: 1px solid var(--neatline); }
+.concept:last-of-type { border-bottom: 1px solid var(--neatline); }
+.tile { width: 200px; max-width: 100%; aspect-ratio: 1; display: block; }
+.body { display: grid; gap: 14px; min-width: 0; align-content: start; }
+.body h2 { font-family: var(--display); font-weight: 500; font-size: 22px; margin: 0; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.body h2 .label { font-size: 12px; }
+.body p { margin: 0; color: var(--dust); max-width: 62ch; }
+.sizes { display: flex; gap: 20px; align-items: end; flex-wrap: wrap; }
+.sizes figure { margin: 0; display: grid; gap: 6px; justify-items: center; }
+.sizes figcaption { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.lockup { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--sky-raised); border: 1px solid var(--neatline); width: fit-content; max-width: 100%; }
+.lockup span { font-family: var(--mono); font-size: 20px; font-weight: 500; letter-spacing: .02em; }
+.lockup svg { width: 32px; height: 32px; flex: none; }
+.notes { font-size: 13px; color: var(--faint); }
+.notes b { color: var(--dust); font-weight: 600; }
+footer { margin-top: 28px; color: var(--dust); max-width: 64ch; }
+@media (max-width: 560px) {
+  .concept { grid-template-columns: 1fr; }
+  .tile { width: 160px; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- macOS icon tile: 1024 grid, 824 body, ~185 radius -->
+    <symbol id="tile" viewBox="0 0 1024 1024">
+      <rect x="100" y="100" width="824" height="824" rx="185" fill="#10161d"/>
+      <rect x="100.5" y="100.5" width="823" height="823" rx="185" fill="none" stroke="#27323f" stroke-width="6"/>
+    </symbol>
+
+    <!-- A. Live zero: k1 + a live star as the 0 + s -->
+    <symbol id="a" viewBox="0 0 1024 1024">
+      <use href="#tile"/>
+      <g fill="#ece7dd">
+        <!-- k -->
+        <rect x="236" y="352" width="44" height="320"/>
+        <polygon points="280,560 400,452 456,452 316,578"/>
+        <polygon points="320,548 362,520 462,672 410,672"/>
+        <!-- 1 -->
+        <polygon points="474,452 532,416 560,416 560,672 516,672 516,470 488,488"/>
+      </g>
+      <!-- 0 as live star -->
+      <circle cx="664" cy="562" r="114" fill="#bdd1ff" fill-opacity=".18"/>
+      <circle cx="664" cy="562" r="72" fill="#bdd1ff"/>
+      <!-- s -->
+      <path d="M842 476c-12-16-34-26-60-26-36 0-62 20-62 48 0 66 128 42 128 112 0 32-30 56-70 56-30 0-56-12-70-34" fill="none" stroke="#ece7dd" stroke-width="38" stroke-linecap="square"/>
+    </symbol>
+
+    <!-- B. Contexts: three plates, one in front lit -->
+    <symbol id="b" viewBox="0 0 1024 1024">
+      <use href="#tile"/>
+      <rect x="236" y="236" width="380" height="380" fill="none" stroke="#66788c" stroke-width="16" stroke-opacity=".45"/>
+      <rect x="322" y="322" width="380" height="380" fill="#10161d" stroke="#66788c" stroke-width="16" stroke-opacity=".8"/>
+      <rect x="408" y="408" width="380" height="380" fill="#18212b" stroke="#ece7dd" stroke-width="16"/>
+      <circle cx="598" cy="598" r="96" fill="#bdd1ff" fill-opacity=".16"/>
+      <circle cx="598" cy="598" r="48" fill="#bdd1ff"/>
+    </symbol>
+
+    <!-- C. Dive: nested squares descending to a lit child -->
+    <symbol id="c" viewBox="0 0 1024 1024">
+      <use href="#tile"/>
+      <g fill="none" stroke-width="16">
+        <rect x="220" y="220" width="584" height="584" stroke="#66788c" stroke-opacity=".5"/>
+        <rect x="324" y="324" width="480" height="480" stroke="#66788c" stroke-opacity=".75"/>
+        <rect x="428" y="428" width="376" height="376" stroke="#a3aebb"/>
+        <rect x="532" y="532" width="272" height="272" stroke="#ece7dd"/>
+      </g>
+      <circle cx="668" cy="668" r="88" fill="#bdd1ff" fill-opacity=".16"/>
+      <circle cx="668" cy="668" r="44" fill="#bdd1ff"/>
+    </symbol>
+
+    <!-- D. Ten: two rows of five star states -->
+    <symbol id="d" viewBox="0 0 1024 1024">
+      <use href="#tile"/>
+      <g transform="translate(232 392)">
+        <!-- row 1: all live -->
+        <g fill="#bdd1ff">
+          <circle cx="0" cy="0" r="56" fill-opacity=".16"/><circle cx="0" cy="0" r="28"/>
+          <circle cx="140" cy="0" r="56" fill-opacity=".16"/><circle cx="140" cy="0" r="28"/>
+          <circle cx="280" cy="0" r="56" fill-opacity=".16"/><circle cx="280" cy="0" r="28"/>
+          <circle cx="420" cy="0" r="56" fill-opacity=".16"/><circle cx="420" cy="0" r="28"/>
+          <circle cx="560" cy="0" r="56" fill-opacity=".16"/><circle cx="560" cy="0" r="28"/>
+        </g>
+        <!-- row 2: live, building, degraded, failed, stopped -->
+        <g transform="translate(0 240)">
+          <circle cx="0" cy="0" r="56" fill="#bdd1ff" fill-opacity=".16"/><circle cx="0" cy="0" r="28" fill="#bdd1ff"/>
+          <circle cx="140" cy="0" r="40" fill="none" stroke="#f1e1b0" stroke-width="10"/><circle cx="140" cy="0" r="20" fill="#f1e1b0"/>
+          <circle cx="280" cy="0" r="32" fill="none" stroke="#f2a660" stroke-width="12"/><path d="M280 -32 A32 32 0 0 0 280 32 Z" fill="#f2a660"/>
+          <polygon points="420,-36 456,0 420,36 384,0" fill="#f4806c"/>
+          <circle cx="560" cy="0" r="26" fill="none" stroke="#7d8997" stroke-width="12"/>
+        </g>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header>
+    <span class="label">k10s · app icon</span>
+    <h1>Four directions for the k10s mark</h1>
+    <p>Each one is built from what the app already draws: square plates, 1 px neatlines and the star glyphs that show pod state, on the night theme. Shown as a macOS icon tile, at Dock and menu sizes, and next to the name.</p>
+  </header>
+
+  <section class="concept" aria-labelledby="h-a">
+    <svg class="tile" role="img" aria-label="Concept A icon"><use href="#a"/></svg>
+    <div class="body">
+      <h2 id="h-a"><span class="label">A</span> Live zero</h2>
+      <p>The name itself, with the 0 drawn as the live star from the list. Reads as k10s at a glance and says what the app is for: seeing what is running.</p>
+      <div class="sizes">
+        <figure><svg width="64" height="64"><use href="#a"/></svg><figcaption>64</figcaption></figure>
+        <figure><svg width="32" height="32"><use href="#a"/></svg><figcaption>32</figcaption></figure>
+        <figure><svg width="16" height="16"><use href="#a"/></svg><figcaption>16</figcaption></figure>
+      </div>
+      <div class="lockup"><svg><use href="#a"/></svg><span>k10s</span></div>
+      <p class="notes"><b>Strong:</b> unmistakable name. <b>Weak:</b> letters blur below 32 px; at 16 px only the blue dot survives.</p>
+    </div>
+  </section>
+
+  <section class="concept" aria-labelledby="h-b">
+    <svg class="tile" role="img" aria-label="Concept B icon"><use href="#b"/></svg>
+    <div class="body">
+      <h2 id="h-b"><span class="label">B</span> Contexts</h2>
+      <p>Three plates stacked, the front one lit. Several clusters open at once, one in focus: the multi-context idea that sets k10s apart from k9s.</p>
+      <div class="sizes">
+        <figure><svg width="64" height="64"><use href="#b"/></svg><figcaption>64</figcaption></figure>
+        <figure><svg width="32" height="32"><use href="#b"/></svg><figcaption>32</figcaption></figure>
+        <figure><svg width="16" height="16"><use href="#b"/></svg><figcaption>16</figcaption></figure>
+      </div>
+      <div class="lockup"><svg><use href="#b"/></svg><span>k10s</span></div>
+      <p class="notes"><b>Strong:</b> holds up at every size; tells the product story. <b>Weak:</b> stacked squares are a common shape for "layers" apps.</p>
+    </div>
+  </section>
+
+  <section class="concept" aria-labelledby="h-c">
+    <svg class="tile" role="img" aria-label="Concept C icon"><use href="#c"/></svg>
+    <div class="body">
+      <h2 id="h-c"><span class="label">C</span> Dive</h2>
+      <p>Nested squares stepping down into one lit child: cluster, workload, pod, container. It is the move you just built, Return to go in, Esc to come back.</p>
+      <div class="sizes">
+        <figure><svg width="64" height="64"><use href="#c"/></svg><figcaption>64</figcaption></figure>
+        <figure><svg width="32" height="32"><use href="#c"/></svg><figcaption>32</figcaption></figure>
+        <figure><svg width="16" height="16"><use href="#c"/></svg><figcaption>16</figcaption></figure>
+      </div>
+      <div class="lockup"><svg><use href="#c"/></svg><span>k10s</span></div>
+      <p class="notes"><b>Strong:</b> distinctive, calm, very hyad. <b>Weak:</b> the four lines merge into a corner block at 16 px.</p>
+    </div>
+  </section>
+
+  <section class="concept" aria-labelledby="h-d">
+    <svg class="tile" role="img" aria-label="Concept D icon"><use href="#d"/></svg>
+    <div class="body">
+      <h2 id="h-d"><span class="label">D</span> Ten</h2>
+      <p>Ten stars for the 10 in k10s: a row all live, and a row with the five states the list shows. A tiny status board.</p>
+      <div class="sizes">
+        <figure><svg width="64" height="64"><use href="#d"/></svg><figcaption>64</figcaption></figure>
+        <figure><svg width="32" height="32"><use href="#d"/></svg><figcaption>32</figcaption></figure>
+        <figure><svg width="16" height="16"><use href="#d"/></svg><figcaption>16</figcaption></figure>
+      </div>
+      <div class="lockup"><svg><use href="#d"/></svg><span>k10s</span></div>
+      <p class="notes"><b>Strong:</b> the only one with the full palette; playful and specific. <b>Weak:</b> busiest of the four; turns into dots at small sizes.</p>
+    </div>
+  </section>
+
+  <footer>Pick one (or mix, for example C with the A wordmark) and I will draw it cleanly at every macOS icon size and add it to the app build.</footer>
+</div>
