@@ -65,3 +65,14 @@ func TestKeySignVerifyAppcast(t *testing.T) {
 		t.Fatalf("%+v\n%s", it, x)
 	}
 }
+
+func TestAppcastShortVersion(t *testing.T) {
+	x, err := Appcast("K10s", Item{Version: "212", ShortVersion: "0.1.1", URL: "https://example.invalid/K10s.zip", Length: 1, EdSignature: "sig"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(x)
+	if !strings.Contains(s, "<sparkle:version>212</sparkle:version>") || !strings.Contains(s, "<sparkle:shortVersionString>0.1.1</sparkle:shortVersionString>") {
+		t.Fatalf("appcast:\n%s", s)
+	}
+}

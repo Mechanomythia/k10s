@@ -38,7 +38,9 @@ jobs:
       HAS_SIGNING: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
       HAS_NOTARY: ${{ secrets.NOTARY_KEY_P8 != '' }}
       HAS_SPARKLE: ${{ secrets.SPARKLE_ED_PRIVATE_KEY != '' }}
-      VERSION: ${{ (github.event_name == 'workflow_dispatch' && inputs.release_version != '') && inputs.release_version || format('0.1.1-dev.{0}', github.run_number) }}
+      VERSION: ${{ (github.event_name == 'workflow_dispatch' && inputs.release_version != '') && inputs.release_version || format('0.1.2-dev.{0}', github.run_number) }}
+      # Sparkle compares CFBundleVersion, so every build gets a number that only goes up.
+      BUILD: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -116,7 +118,7 @@ jobs:
         run: |
           V="${VERSION#v}"
           # Signs the final (stapled) zip; the URL is where the release job publishes it.
-          go run ./cmd/k10s-release appcast --version "$V" \
+          go run ./cmd/k10s-release appcast --version "$BUILD" --short-version "$V" \
             --url "https://github.com/${{ github.repository }}/releases/download/v$V/K10s-$V.zip" \
             --notes "https://github.com/${{ github.repository }}/releases/tag/v$V" \
             --file "dist/K10s-$V.zip" --out dist/appcast.xml

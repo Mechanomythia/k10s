@@ -82,7 +82,8 @@ func Verify(pubB64, sigB64 string, data []byte) bool {
 
 // Item is one release in the appcast.
 type Item struct {
-	Version         string // CFBundleVersion and CFBundleShortVersionString (e.g. 0.2.1)
+	Version         string // CFBundleVersion: the build number Sparkle compares (e.g. 212)
+	ShortVersion    string // CFBundleShortVersionString shown to people (e.g. 0.1.1); Version when empty
 	URL             string // archive download URL
 	Length          int64
 	EdSignature     string
@@ -111,7 +112,11 @@ func Appcast(title string, it Item) ([]byte, error) {
 	fmt.Fprintf(&b, "    <item>\n      <title>%s</title>\n", esc(title+" "+it.Version))
 	fmt.Fprintf(&b, "      <pubDate>%s</pubDate>\n", it.PubDate.Format(time.RFC1123Z))
 	fmt.Fprintf(&b, "      <sparkle:version>%s</sparkle:version>\n", esc(it.Version))
-	fmt.Fprintf(&b, "      <sparkle:shortVersionString>%s</sparkle:shortVersionString>\n", esc(it.Version))
+	short := it.ShortVersion
+	if short == "" {
+		short = it.Version
+	}
+	fmt.Fprintf(&b, "      <sparkle:shortVersionString>%s</sparkle:shortVersionString>\n", esc(short))
 	if it.MinimumSystem != "" {
 		fmt.Fprintf(&b, "      <sparkle:minimumSystemVersion>%s</sparkle:minimumSystemVersion>\n", esc(it.MinimumSystem))
 	}
