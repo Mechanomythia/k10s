@@ -1,4 +1,5 @@
 import Foundation
+import K10sCore
 
 /// Opens a command in your terminal through a short-lived .command script (ADR 0005, decision 3).
 enum TerminalLauncher {
