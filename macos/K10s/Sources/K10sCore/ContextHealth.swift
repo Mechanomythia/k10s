@@ -28,6 +28,12 @@ public struct ContextStatus: Equatable {
     public var state: ContextState
     public var error: String?
     public var version: String?
+
+    public init(state: ContextState, error: String? = nil, version: String? = nil) {
+        self.state = state
+        self.error = error
+        self.version = version
+    }
 }
 
 /// Per-context connection state, fed by context.state events.

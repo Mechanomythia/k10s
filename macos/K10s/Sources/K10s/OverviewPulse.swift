@@ -39,13 +39,8 @@ struct OverviewPulse: View {
         } catch {}
     }
 
-    /// ContextStatus has no public init: round-trip the shared fields through ContextStateChange.
     private func status(_ s: Summary) -> ContextStatus? {
-        guard let data = try? JSONEncoder().encode(s),
-              let change = try? JSONDecoder().decode(ContextStateChange.self, from: data) else { return nil }
-        var h = ContextHealth()
-        h.apply(change)
-        return h.statuses[s.context]
+        ContextStatus(state: s.state, error: s.error, version: s.version)
     }
 
     // MARK: Layout
