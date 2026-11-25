@@ -224,3 +224,59 @@ func TestUnauthorizedTable(t *testing.T) {
 		return g.event == EventContextState && ok && c.State == StateUnauthorized
 	})
 }
+
+// Every write names exactly one object: nothing that could address a
+// collection, a subresource or another path reaches the server.
+func TestWritesRefuseUnscoped(t *testing.T) {
+	d, a := writeEnv(t)
+	odd := func(plural string) ResourceRef { return ResourceRef{Group: "apps", Version: "v1", Plural: plural} }
+	for name, p := range map[string]ObjectParams{
+		"empty name":      {Context: "c", Resource: deploys, Namespace: "default"},
+		"no namespace":    {Context: "c", Resource: deploys, Name: "web"},
+		"not served":      {Context: "c", Resource: odd("jobs"), Namespace: "default", Name: "web"},
+		"subresource":     {Context: "c", Resource: odd("deployments/scale"), Namespace: "default", Name: "web"},
+		"path traversal":  {Context: "c", Resource: odd("../../../api/v1/pods"), Namespace: "default", Name: "web"},
+		"slash in name":   {Context: "c", Resource: deploys, Namespace: "default", Name: "web/scale"},
+		"dot-dot name":    {Context: "c", Resource: deploys, Namespace: "default", Name: ".."},
+		"slash namespace": {Context: "c", Resource: deploys, Namespace: "a/b", Name: "web"},
+	} {
+		if err := call(t, d.delete, p, nil); err == nil {
+			t.Errorf("delete %s: accepted", name)
+		}
+		if err := call(t, d.restart, p, nil); err == nil {
+			t.Errorf("restart %s: accepted", name)
+		}
+	}
+	if len(a.reqs) != 0 {
+		t.Errorf("requests reached the server: %v", a.reqs)
+	}
+}
+
+func TestReplaceRefusals(t *testing.T) {
+	d, a := writeEnv(t)
+	p := ReplaceParams{Context: "c", Resource: deploys, Namespace: "default", Name: "web"}
+	for name, y := range map[string]string{
+		"empty":           "",
+		"null":            "null",
+		"scalar":          "x",
+		"list kind":       "apiVersion: apps/v1\nkind: DeploymentList\nmetadata:\n  resourceVersion: \"9\"\nitems: []\n",
+		"no metadata":     "apiVersion: apps/v1\nkind: Deployment\n",
+		"generateName":    "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  generateName: web-\n  namespace: default\n  resourceVersion: \"9\"\n",
+		"no resourceVers": strings.Replace(depYAML, "  resourceVersion: \"9\"\n", "", 1),
+		"numeric name":    strings.Replace(depYAML, "name: web", "name: 1", 1),
+	} {
+		q := p
+		q.YAML = y
+		if err := call(t, d.replace, q, nil); errCode(err) != CodeInvalidParams {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	q := p
+	q.Namespace, q.YAML = "", strings.Replace(depYAML, "  namespace: default\n", "", 1)
+	if err := call(t, d.replace, q, nil); errCode(err) != CodeInvalidParams {
+		t.Errorf("no namespace: %v", err)
+	}
+	if len(a.reqs) != 0 {
+		t.Errorf("requests reached the server: %v", a.reqs)
+	}
+}

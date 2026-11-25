@@ -39,7 +39,6 @@ public enum ErrorCode {
     public static let `internal` = "internal"
     public static let forbidden = "forbidden"
     public static let conflict = "conflict"
-    public static let notFound = "not_found"
 }
 
 /// Any JSON value: the raw params, result and data of the envelopes.
