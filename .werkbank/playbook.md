@@ -1,23 +1,25 @@
-# k10s playbook (draft)
+# k10s playbook
 
-Draft from onboarding (proposal #1). The repository is empty: commands below follow the iris layout and become real once the foundation proposal lands. Anything marked (pending q1) depends on the Kubernetes client decision.
+From onboarding (ADR 0001) and the engine (ADR 0002).
 
 ## What k10s is
 
 A native macOS app version of k9s: every kubectl-level operation in a SwiftUI interface, with multi-context (read several kube contexts at once, switch between them easily).
 
-## Layout (pending q1)
+## Layout
 
-- `cmd/`, `internal/`: Go engine on client-go (kubeconfig, discovery, watches, logs, exec, port-forward).
-- `macos/K10s/`: SwiftUI app (Swift Package, like `iris/macos/Iris`). Minimum macOS 14.
-- `docs/adr/`: decision records (werkbank commits approved proposals here).
+- `cmd/k10s-engine`, `internal/engine/`: Go engine on client-go, a child process of the app speaking newline-delimited JSON over stdio. `protocol.go` is the source of truth; `testdata/protocol/*.json` are golden files the Swift tests decode too, so a protocol change updates protocol.go, its golden file and `macos/K10s/Sources/K10sCore/Protocol.swift` together.
+- `cmd/k10s-release`, `internal/sparkle/`: appcast signing for releases.
+- `macos/K10s/`: SwiftUI app (Swift Package, like `iris/macos/Iris`). Minimum macOS 14. Targets: `K10sCore` (protocol + EngineClient, no UI), `K10s` (app, Sparkle), `K10sTests`. Run from source with `K10S_ENGINE=$(pwd)/bin/k10s-engine swift run` after `make build`.
+- `docs/adr/`: decision records, numbered `NNNN-slug.md`. ADR 0001 holds the product brief and the founding decisions.
 
 ## Install, test, build
 
 - Requires Go (version from go.mod) and, for the app, macOS with Xcode command line tools.
 - `make test`: `go test -race ./...` (runs on Linux too).
 - `make vet`: `go vet ./...`.
-- `make app`: builds `dist/K10s.app` (universal, ad-hoc signed without a signing identity). macOS only.
+- `make app`: builds `dist/K10s.app` and `dist/K10s-$VERSION.zip` (universal, ad-hoc signed without a signing identity). macOS only.
+- `cd macos/K10s && swift test`: Swift protocol tests. macOS only.
 - Linux sessions (werkbank routines) can run Go tests and cross-compile darwin (`GOOS=darwin GOARCH=arm64 go build ./...`), not the Swift app. CI (GitHub Actions, macos-15 runner) builds the app.
 - Tests never need a real cluster: use client-go fake clients or envtest. Never point tests at the owner's kubeconfig.
 
@@ -39,4 +41,5 @@ A native macOS app version of k9s: every kubectl-level operation in a SwiftUI in
 - Never push to main; work on a branch and open a pull request.
 - Never read, copy or log kubeconfig contents, tokens or exec-plugin output beyond what the engine needs in memory. No credentials in logs, crash reports or test fixtures.
 - Never run writes against a real cluster from a session.
+- Never read kubeconfig from `~/.local/share/iris/claude/`: that is iris's Claude-only config; k10s uses your own (ADR 0001, decision 5).
 - No telemetry or network calls other than to the user's clusters and the Sparkle feed.

@@ -1,0 +1,1 @@
+{"contexts":["prod","dev"],"resource":{"version":"v1","plural":"pods"},"namespace":"default","labelSelector":"app=web"}
