@@ -38,7 +38,7 @@ jobs:
       HAS_SIGNING: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
       HAS_NOTARY: ${{ secrets.NOTARY_KEY_P8 != '' }}
       HAS_SPARKLE: ${{ secrets.SPARKLE_ED_PRIVATE_KEY != '' }}
-      VERSION: ${{ (github.event_name == 'workflow_dispatch' && inputs.release_version != '') && inputs.release_version || format('0.1.2-dev.{0}', github.run_number) }}
+      VERSION: ${{ (github.event_name == 'workflow_dispatch' && inputs.release_version != '') && inputs.release_version || format('0.1.4-dev.{0}', github.run_number) }}
       # Sparkle compares CFBundleVersion, so every build gets a number that only goes up.
       BUILD: ${{ github.run_number }}
     steps:
