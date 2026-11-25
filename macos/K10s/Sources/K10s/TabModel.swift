@@ -38,6 +38,10 @@ final class TabModel {
     var selection: Row?
     var inspectorTab: InspectorTab = .describe
     var inspectorOpen = false
+    /// Inspector edit mode (built by the inspector); set by Edit…/e.
+    var editing = false
+    /// A write waiting for its confirm sheet.
+    var pendingAction: PendingAction?
     var health = ContextHealth()
     var sidebarVisible = true
     /// Key handling hooks: whoever handles ":" / "/" / ⌘T sets these.
