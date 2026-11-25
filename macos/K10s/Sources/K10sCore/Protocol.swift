@@ -9,6 +9,7 @@ public enum Method {
     public static let contextsWatch = "contexts.watch"
     public static let resourcesList = "resources.list"
     public static let tableSubscribe = "table.subscribe"
+    public static let overviewSubscribe = "overview.subscribe"
     public static let objectYAML = "object.yaml"
     public static let objectDescribe = "object.describe"
     public static let objectEvents = "object.events"
@@ -30,6 +31,7 @@ public enum EventName {
     public static let forbidden = "forbidden"
     public static let lines = "lines"
     public static let end = "end"
+    public static let summary = "summary"
 }
 
 public enum ErrorCode {
@@ -366,4 +368,61 @@ public struct ReplaceParams: Codable {
 
 public struct ReplaceResult: Codable {
     public let resourceVersion: String
+}
+
+/// Params of overview.subscribe (result `SubscribeResult`): one `summary`
+/// event per context, at most every 5 s and only when it changed.
+public struct OverviewSubscribeParams: Codable {
+    public let contexts: [String]
+    public init(contexts: [String]) { self.contexts = contexts }
+}
+
+/// Data of a `summary` event: one context's overview. An unreachable or
+/// unauthorized context carries only context, state, error and
+/// metricsAvailable (false); every figure is nil.
+public struct Summary: Codable {
+    public let context: String
+    public let state: ContextState
+    public var error: String?
+    public var version: String?
+    /// False without metrics-server: the used figures are 0 and the top
+    /// nodes have no percentages.
+    public let metricsAvailable: Bool
+    public var nodesReady: Int?
+    public var nodesTotal: Int?
+    public var cpuUsedMilli: Int?
+    public var cpuAllocatableMilli: Int?
+    public var memUsedBytes: Int?
+    public var memAllocatableBytes: Int?
+    public var podsRunning: Int?
+    public var podsTotal: Int?
+    public var podCapacity: Int?
+    public var podsFailing: Int?
+    public var podsDegraded: Int?
+    public var workloadsNotReady: Int?
+    public var workloadsTotal: Int?
+    public var warningsLastHour: Int?
+    /// At most 5, busiest first (by name without metrics).
+    public var topNodes: [TopNode]?
+    /// At most 10 from the last hour, newest first.
+    public var recentWarnings: [WarningEvent]?
+}
+
+public struct TopNode: Codable {
+    public let name: String
+    public let ready: Bool
+    /// Of allocatable; nil without metrics.
+    public var cpuPercent: Int?
+    public var memPercent: Int?
+}
+
+public struct WarningEvent: Codable {
+    /// RFC 3339.
+    public let lastSeen: String
+    public let reason: String
+    public let message: String
+    /// Kind/name of the involved object.
+    public let object: String
+    public var namespace: String?
+    public let count: Int
 }
