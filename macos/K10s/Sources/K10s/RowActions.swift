@@ -29,7 +29,7 @@ extension TabModel {
     /// Queues the confirm sheet for the selected row; false when the action does not apply.
     @discardableResult
     func request(_ action: RowAction) -> Bool {
-        guard let row = selection, let kind else { return false }
+        guard let row = activeSelection, let kind = activeKind else { return false }
         if action == .scale, !kind.scalable { return false }
         if action == .restart, !kind.restartable { return false }
         if action == .shell, !kind.isPod { return false }
@@ -41,14 +41,14 @@ extension TabModel {
     }
 
     func copyName() {
-        guard let row = selection else { return }
+        guard let name = inContainers ? selectedContainer : selection?.name else { return }
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(row.name, forType: .string)
+        NSPasteboard.general.setString(name, forType: .string)
     }
 
     /// Opens the inspector in YAML edit mode (the inspector builds the editor).
     func edit() {
-        guard selection != nil else { return }
+        guard activeSelection != nil else { return }
         inspectorTab = .yaml
         inspectorOpen = true
         editing = true
@@ -66,15 +66,15 @@ struct RowActionItems: View {
     }
 
     var body: some View {
-        if row != nil || tab.selection != nil {
+        if row != nil || tab.activeSelection != nil {
             Button("Describe", action: act { _ = tab.openInspector(.describe) })
             Button("YAML", action: act { _ = tab.openInspector(.yaml) })
             Button("Events", action: act { _ = tab.openInspector(.events) })
             Button("Edit…", action: act { tab.edit() })
-            if tab.kind?.scalable == true { Button("Scale…", action: act { _ = tab.request(.scale) }) }
-            if tab.kind?.restartable == true { Button("Restart", action: act { _ = tab.request(.restart) }) }
-            if tab.kind?.isPod == true { Button("Open shell", action: act { _ = tab.request(.shell) }) }
-            if tab.kind?.forwardable == true { Button("Port-forward…", action: act { _ = tab.request(.portForward) }) }
+            if tab.activeKind?.scalable == true { Button("Scale…", action: act { _ = tab.request(.scale) }) }
+            if tab.activeKind?.restartable == true { Button("Restart", action: act { _ = tab.request(.restart) }) }
+            if tab.activeKind?.isPod == true { Button("Open shell", action: act { _ = tab.request(.shell) }) }
+            if tab.activeKind?.forwardable == true { Button("Port-forward…", action: act { _ = tab.request(.portForward) }) }
             Button("Delete…", action: act { _ = tab.request(.delete) })
             Divider()
             Button("Copy name", action: act { tab.copyName() })

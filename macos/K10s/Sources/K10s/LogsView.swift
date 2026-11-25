@@ -9,6 +9,7 @@ private struct LogLine: Identifiable {
 /// Following logs of the selected pod (T5).
 struct LogsView: View {
     let row: Row
+    var tab: TabModel
     @Environment(EngineClient.self) private var engine
 
     @State private var names: [String] = []
@@ -61,6 +62,9 @@ struct LogsView: View {
         }
         .task(id: row.uid) { await loadContainers() }
         .task(id: key) { await stream() }
+        .onChange(of: tab.presetContainer) {
+            if let p = tab.presetContainer { container = p; tab.presetContainer = nil }
+        }
     }
 
     private var bar: some View {
@@ -133,9 +137,11 @@ struct LogsView: View {
         if let r: PodContainersResult = try? await engine.request(Method.podContainers, p) {
             names = r.containers + r.initContainers
             container = r.containers.first ?? names.first ?? ""
+            if let p = tab.presetContainer, names.contains(p) { container = p }
         } else {
             container = ""
         }
+        tab.presetContainer = nil
         containersLoaded = true
     }
 

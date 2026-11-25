@@ -6,6 +6,9 @@ import SwiftUI
 /// forwards context.state events to tab.apply(_:), sets tab.selection / tab.inspectorOpen.
 struct ListPane: View {
     var tab: TabModel
+    /// 0 is the tab's own list; a child list has its depth and the level it shows.
+    var depth = 0
+    var level: Level?
     @Environment(EngineClient.self) private var engine
     @State private var loaded = false
     @State private var showLoading = false
@@ -23,9 +26,19 @@ struct ListPane: View {
     }
 
     private var key: SubKey {
-        SubKey(kind: tab.kind, namespace: tab.namespace, selector: tab.table.labelSelector,
+        SubKey(kind: paneKind, namespace: tab.namespace, selector: table.labelSelector,
                restarts: engine.restarts, retry: retry)
     }
+
+    private var table: TableModel { tab.tableAt(depth) }
+    private func mutate(_ f: (inout TableModel) -> Void) { tab.update(depth: depth, f) }
+    private var query: ChildQuery? {
+        if case .table(let q)? = level?.children { return q }
+        return nil
+    }
+    private var paneKind: KindEntry? { query?.kind ?? tab.kind }
+    private var contexts: [String] { level.map { [$0.parent.context] } ?? tab.scope.contexts }
+    private var paneNamespace: String? { query != nil ? query?.namespace : tab.namespace }
 
     private func isFailed(_ c: String) -> Bool {
         let s = tab.health.state(of: c)
@@ -35,11 +48,11 @@ struct ListPane: View {
     private func rid(_ r: Row) -> String { r.context + "\u{0}" + r.uid }
 
     var body: some View {
-        let failing = tab.scope.contexts.filter(isFailed)
+        let failing = contexts.filter(isFailed)
         Group {
-            if tab.scope.contexts.count == 1, let c = failing.first, let st = tab.health.statuses[c] {
+            if contexts.count == 1, let c = failing.first, let st = tab.health.statuses[c] {
                 ContextErrorView(context: c, status: st)
-            } else if let kind = tab.kind {
+            } else if let kind = paneKind {
                 content(kind: kind, failing: failing)
             } else {
                 Color.clear
@@ -49,7 +62,7 @@ struct ListPane: View {
         .background(Hy.sky)
         .task(id: key) { await run() }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("k10sRetryContext"))) { note in
-            if let c = note.object as? String, tab.scope.contexts.contains(c) { retry += 1 }
+            if let c = note.object as? String, contexts.contains(c) { retry += 1 }
         }
         .task(id: loaded) {
             guard !loaded else { return }
@@ -61,30 +74,37 @@ struct ListPane: View {
     // MARK: subscription
 
     @MainActor private func run() async {
-        guard let kind = tab.kind else { return }
-        var t = TableModel(contexts: tab.scope.contexts)
-        t.filter = tab.table.filter
-        t.wide = tab.table.wide
-        t.sortColumn = tab.table.sortColumn
-        t.ascending = tab.table.ascending
-        tab.table = t
+        guard let kind = paneKind else { return }
+        var t = TableModel(contexts: contexts)
+        let cur = table
+        t.filter = cur.filter
+        t.wide = cur.wide
+        t.sortColumn = cur.sortColumn
+        t.ascending = cur.ascending
+        mutate { $0 = t }
         loaded = false
         showLoading = false
         forbidden = [:]
-        var params = TableSubscribeParams(contexts: tab.scope.contexts, resource: kind.ref,
-                                          labelSelector: tab.table.labelSelector)
+        var params = TableSubscribeParams(contexts: contexts, resource: kind.ref,
+                                          labelSelector: t.labelSelector)
+        if let q = query {
+            if q.none { loaded = true; return }
+            params.labelSelector = joinSelectors(q.labelSelector, t.labelSelector)
+            params.fieldSelector = q.fieldSelector
+            params.ownerUID = q.ownerUID
+        }
         if kind.namespaced {
-            if let ns = tab.namespace { params.namespace = ns } else { params.allNamespaces = true }
+            if let ns = paneNamespace { params.namespace = ns } else { params.allNamespaces = true }
         }
         do {
             for try await event in try await engine.subscribe(Method.tableSubscribe, params: params) {
                 switch event.name {
                 case EventName.snapshot:
-                    if let s = try? event.decode(Snapshot.self) { tab.table.apply(s); loaded = true }
+                    if let s = try? event.decode(Snapshot.self) { mutate { $0.apply(s) }; loaded = true }
                 case EventName.upsert:
-                    if let u = try? event.decode(Upsert.self) { tab.table.apply(u) }
+                    if let u = try? event.decode(Upsert.self) { mutate { $0.apply(u) } }
                 case EventName.delete:
-                    if let d = try? event.decode(Delete.self) { tab.table.apply(d) }
+                    if let d = try? event.decode(Delete.self) { mutate { $0.apply(d) } }
                 case EventName.contextState:
                     if let c = try? event.decode(ContextStateChange.self) { tab.apply(c) }
                 case EventName.forbidden:
@@ -100,23 +120,25 @@ struct ListPane: View {
 
     @ViewBuilder
     private func content(kind: KindEntry, failing: [String]) -> some View {
-        let total = tab.table.totalCount
+        let total = table.totalCount
         VStack(alignment: .leading, spacing: 0) {
             header(kind: kind, total: total, failed: failing.count)
-            if tab.scope.contexts.count > 1 {
+            if contexts.count > 1 {
                 ForEach(failing, id: \.self) { notice($0) }
             }
             ForEach(forbidden.keys.sorted(), id: \.self) { forbiddenNotice(kind: kind, context: $0) }
-            if !loaded {
+            if query?.none == true {
+                SelectsNoneView(kind: kind)
+            } else if !loaded {
                 if showLoading {
                     Text("Loading…").font(Hy.mono(12)).foregroundStyle(Hy.faint)
                         .padding(.horizontal, Hy.s5).padding(.top, Hy.s2)
                 }
                 Spacer(minLength: 0)
-            } else if total == 0 && tab.table.filter.isEmpty && !forbidden.isEmpty {
+            } else if total == 0 && table.filter.isEmpty && !forbidden.isEmpty {
                 Spacer(minLength: 0)
-            } else if total == 0 && tab.table.filter.isEmpty {
-                EmptyKindView(kind: kind, namespace: kind.namespaced ? tab.namespace : nil)
+            } else if total == 0 && table.filter.isEmpty {
+                EmptyKindView(kind: kind, namespace: kind.namespaced ? paneNamespace : nil)
             } else {
                 grid
             }
@@ -124,17 +146,22 @@ struct ListPane: View {
     }
 
     private func header(kind: KindEntry, total: Int, failed: Int) -> some View {
-        let n = tab.scope.contexts.count
-        let filter = tab.table.filter.trimmingCharacters(in: .whitespaces)
+        let n = contexts.count
+        let filter = table.filter.trimmingCharacters(in: .whitespaces)
         var parts: [String] = []
         if !filter.isEmpty {
-            parts.append("\(tab.table.filteredCount) of \(total) match “\(filter)”")
+            parts.append("\(table.filteredCount) of \(total) match “\(filter)”")
         } else {
-            let ns = kind.namespaced ? " in \(tab.namespace ?? "all namespaces")" : ""
+            let ns = kind.namespaced ? " in \(paneNamespace ?? "all namespaces")" : ""
             parts.append("\(total)\(ns) · watching")
         }
         if failed > 0 && n > 1 { parts.append("\(n - failed) of \(n) clusters") }
         return VStack(alignment: .leading, spacing: 2) {
+            if let level {
+                let path = tab.breadcrumb(upTo: depth)
+                Text(tab.scope.contexts.count > 1 ? path + " · " + level.parent.context : path)
+                    .font(Hy.mono(12)).foregroundStyle(Hy.dust).lineLimit(1).truncationMode(.middle)
+            }
             Text(kind.kind.isEmpty ? kind.plural : kind.plural.capitalized)
                 .font(Hy.display(24)).foregroundStyle(Hy.starlight)
             Text(parts.joined(separator: " · "))
@@ -183,7 +210,7 @@ struct ListPane: View {
     private static let gutter: CGFloat = 28
 
     private func widths(columns: [String], rows: [Row]) -> [CGFloat] {
-        let sample = rows.prefix(50).map { tab.table.cells(of: $0) }
+        let sample = rows.prefix(50).map { table.cells(of: $0) }
         return columns.indices.map { i in
             var longest = columns[i].count + 2
             for cells in sample where i < cells.count { longest = max(longest, cells[i].count) }
@@ -199,8 +226,8 @@ struct ListPane: View {
     }
 
     private var grid: some View {
-        let columns = tab.table.columns
-        let rows = tab.table.rows
+        let columns = table.columns
+        let rows = table.rows
         let base = widths(columns: columns, rows: rows)
         let nameIdx = columns.firstIndex(of: "Name") ?? 0
         return GeometryReader { geo in
@@ -230,7 +257,7 @@ struct ListPane: View {
         .focused($focused)
         .focusEffectDisabled()
         .onKeyPress(phases: [.down, .repeat]) { press in
-            handleKey(press, rows: tab.table.rows)
+            handleKey(press, rows: table.rows)
         }
     }
 
@@ -242,8 +269,8 @@ struct ListPane: View {
                     Button { sort(by: name) } label: {
                         HStack(spacing: 4) {
                             HyLabel(name)
-                            if tab.table.sortColumn == name {
-                                Text(tab.table.ascending ? "▲" : "▼").font(Hy.ui(9)).foregroundStyle(Hy.dust)
+                            if table.sortColumn == name {
+                                Text(table.ascending ? "▲" : "▼").font(Hy.ui(9)).foregroundStyle(Hy.dust)
                             }
                             Spacer(minLength: 0)
                         }
@@ -259,18 +286,17 @@ struct ListPane: View {
     }
 
     private func sort(by name: String) {
-        if tab.table.sortColumn == name {
-            tab.table.ascending.toggle()
+        if table.sortColumn == name {
+            mutate { $0.ascending.toggle() }
         } else {
-            tab.table.sortColumn = name
-            tab.table.ascending = true
+            mutate { $0.sortColumn = name; $0.ascending = true }
         }
     }
 
     private func dataRow(_ row: Row, widths: [CGFloat], rows: [Row]) -> some View {
         let selected = tab.selection.map { rid($0) == rid(row) } ?? false
-        let cells = tab.table.cells(of: row)
-        let multi = tab.scope.contexts.count > 1
+        let cells = table.cells(of: row)
+        let multi = contexts.count > 1
         return VStack(spacing: 0) {
             HStack(spacing: 0) {
                 ZStack {
@@ -302,8 +328,7 @@ struct ListPane: View {
 
     private func open(_ row: Row) {
         tab.selection = row
-        tab.inspectorTab = .describe
-        tab.inspectorOpen = true
+        tab.activate()
     }
 
     private func handleKey(_ press: KeyPress, rows: [Row]) -> KeyPress.Result {
