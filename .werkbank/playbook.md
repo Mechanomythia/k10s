@@ -1,6 +1,6 @@
 # k10s playbook
 
-From onboarding (ADR 0001). Commands below follow the iris layout and become real once the engine proposal (#2) lands.
+From onboarding (ADR 0001) and the engine (ADR 0002).
 
 ## What k10s is
 
@@ -8,8 +8,9 @@ A native macOS app version of k9s: every kubectl-level operation in a SwiftUI in
 
 ## Layout
 
-- `cmd/`, `internal/`: Go engine on client-go (kubeconfig, discovery, watches, logs, exec, port-forward).
-- `macos/K10s/`: SwiftUI app (Swift Package, like `iris/macos/Iris`). Minimum macOS 14.
+- `cmd/k10s-engine`, `internal/engine/`: Go engine on client-go, a child process of the app speaking newline-delimited JSON over stdio. `protocol.go` is the source of truth; `testdata/protocol/*.json` are golden files the Swift tests decode too, so a protocol change updates protocol.go, its golden file and `macos/K10s/Sources/K10sCore/Protocol.swift` together.
+- `cmd/k10s-release`, `internal/sparkle/`: appcast signing for releases.
+- `macos/K10s/`: SwiftUI app (Swift Package, like `iris/macos/Iris`). Minimum macOS 14. Targets: `K10sCore` (protocol + EngineClient, no UI), `K10s` (app, Sparkle), `K10sTests`. Run from source with `K10S_ENGINE=$(pwd)/bin/k10s-engine swift run` after `make build`.
 - `docs/adr/`: decision records, numbered `NNNN-slug.md`. ADR 0001 holds the product brief and the founding decisions.
 
 ## Install, test, build
@@ -17,7 +18,8 @@ A native macOS app version of k9s: every kubectl-level operation in a SwiftUI in
 - Requires Go (version from go.mod) and, for the app, macOS with Xcode command line tools.
 - `make test`: `go test -race ./...` (runs on Linux too).
 - `make vet`: `go vet ./...`.
-- `make app`: builds `dist/K10s.app` (universal, ad-hoc signed without a signing identity). macOS only.
+- `make app`: builds `dist/K10s.app` and `dist/K10s-$VERSION.zip` (universal, ad-hoc signed without a signing identity). macOS only.
+- `cd macos/K10s && swift test`: Swift protocol tests. macOS only.
 - Linux sessions (werkbank routines) can run Go tests and cross-compile darwin (`GOOS=darwin GOARCH=arm64 go build ./...`), not the Swift app. CI (GitHub Actions, macos-15 runner) builds the app.
 - Tests never need a real cluster: use client-go fake clients or envtest. Never point tests at the owner's kubeconfig.
 
