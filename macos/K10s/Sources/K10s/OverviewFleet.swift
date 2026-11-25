@@ -102,16 +102,17 @@ struct OverviewFleet: View {
         VStack(alignment: .leading, spacing: 2) {
             Text("Overview").font(Hy.display(24)).foregroundStyle(Hy.starlight)
             TimelineView(.periodic(from: .now, by: 1)) { ctx in
-                let n = tab.scope.contexts.count
-                let ok = summaries.values.filter { !isFailed($0) && $0.state != .connecting }.count
-                var line = "\(ok) of \(n) clusters answer"
-                if let u = updated {
-                    line += " · updated \(max(0, Int(ctx.date.timeIntervalSince(u)))) s ago"
-                }
-                return Text(line).font(Hy.mono(12)).foregroundStyle(Hy.faint)
+                Text(meta(ctx.date)).font(Hy.mono(12)).foregroundStyle(Hy.faint)
             }
         }
         .padding(.horizontal, Hy.s5).padding(.top, Hy.s4).padding(.bottom, Hy.s3)
+    }
+
+    private func meta(_ now: Date) -> String {
+        let ok = summaries.values.filter { $0.state == .live }.count
+        var line = "\(ok) of \(tab.scope.contexts.count) clusters answer"
+        if let u = updated { line += " · updated \(max(0, Int(now.timeIntervalSince(u)))) s ago" }
+        return line
     }
 
     // MARK: rows
