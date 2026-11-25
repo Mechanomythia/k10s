@@ -19,7 +19,7 @@ import (
 type Usage struct{ CPU, Mem int64 }
 
 // Metrics polls metrics.k8s.io/v1beta1 per context, on pollers shared by
-// everything that needs them and stopped when the last user leaves (ADR 0006,
+// everything that needs them and stopped when the last user leaves (ADR 0007,
 // decision 3).
 type Metrics struct {
 	conns    *Conns

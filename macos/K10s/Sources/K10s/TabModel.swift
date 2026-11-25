@@ -54,7 +54,22 @@ final class TabModel {
     /// Opens a native tab for a scope; set by MainWindow from the openWindow environment action.
     @ObservationIgnored var openScope: ((TabScope) -> Void)?
 
+    /// Dive levels over the tab's own list (ADR 0006); `table` is always the visible list's table.
+    var levels = LevelStack()
+    /// Tables of the table levels under the top one, root first.
+    var belowTables: [TableModel] = []
+    /// Containers level: the pod's containers as shown, and the selected one's name.
+    var containers: [ContainerStatus] = []
+    var selectedContainer: String?
+    /// Container the logs view picks when it opens; it clears this.
+    var presetContainer: String?
+    /// An object.children request is in flight, or failed with this message.
+    var diving = false
+    var diveError: String?
+
+    @ObservationIgnored var engine: EngineClient?
     @ObservationIgnored private var namespaceInitialized = false
+    @ObservationIgnored private var diveID = 0
 
     init(scope: TabScope) {
         var table = TableModel(contexts: scope.contexts)
@@ -75,9 +90,129 @@ final class TabModel {
     }
 
     func select(kind: KindEntry) {
+        clearStack()
         self.kind = kind
         showingOverview = false
         selection = nil
+    }
+
+    // MARK: levels
+
+    var inContainers: Bool {
+        if case .containers? = levels.top?.children { return true }
+        return false
+    }
+
+    var activeKind: KindEntry? {
+        switch levels.top?.children {
+        case .table(let q)?: return q.kind
+        case .containers?: return levels.top?.parentKind
+        case nil: return kind
+        }
+    }
+
+    var activeContexts: [String] { levels.top.map { [$0.parent.context] } ?? scope.contexts }
+
+    var activeNamespace: String? {
+        switch levels.top?.children {
+        case .table(let q)?: return q.namespace
+        case .containers?: return levels.top?.parent.namespace
+        case nil: return namespace
+        }
+    }
+
+    /// The row the object keys act on: the parent pod on the containers level.
+    var activeSelection: Row? { inContainers ? levels.top?.parent : selection }
+
+    /// "deployments / web / pods / web-7d9f" for the first `count` levels.
+    func breadcrumb(upTo count: Int) -> String {
+        levels.levels.prefix(count).map { "\($0.parentKind.plural) / \($0.parent.name)" }.joined(separator: " / ")
+    }
+
+    /// The table of the list at `depth` (0 = the tab's own list).
+    func tableAt(_ depth: Int) -> TableModel { depth < belowTables.count ? belowTables[depth] : table }
+
+    /// Edits the table at `depth`; a list that has been popped (depth too big) is ignored.
+    func update(depth: Int, _ f: (inout TableModel) -> Void) {
+        if depth < belowTables.count { f(&belowTables[depth]) } else if depth == belowTables.count { f(&table) }
+    }
+
+    /// Return / double-click on the selected row: dive when its kind has children. False otherwise.
+    @discardableResult
+    func diveIn() -> Bool {
+        guard !inContainers, !diving, let row = selection, let kind = activeKind, let child = kind.childKind else { return false }
+        let covered = CoveredList(filter: table.filter, sortColumn: table.sortColumn, ascending: table.ascending,
+                                  wide: table.wide, selection: row)
+        inspectorOpen = false
+        editing = false
+        diveError = nil
+        switch child {
+        case .containers:
+            containers = []
+            selectedContainer = nil
+            push(Level(parent: row, parentKind: kind, children: .containers, covered: covered))
+        case .table:
+            guard let engine else { return false }
+            diving = true
+            diveID += 1
+            let id = diveID
+            Task { [self] in
+                do {
+                    let p = ObjectParams(context: row.context, resource: kind.ref, namespace: row.namespace, name: row.name)
+                    let r: ChildrenResult = try await engine.request(Method.objectChildren, p)
+                    guard id == diveID else { return }
+                    diving = false
+                    guard let childKind = catalog.kinds.first(where: {
+                        $0.group == (r.resource.group ?? "") && $0.plural == r.resource.plural
+                    }) else {
+                        diveError = "This cluster does not list \(r.resource.plural)."
+                        return
+                    }
+                    let level = Level(parent: row, parentKind: kind,
+                                      children: .table(ChildQuery(kind: childKind, result: r)), covered: covered)
+                    belowTables.append(table)
+                    table = TableModel(contexts: [row.context])
+                    selection = nil
+                    push(level)
+                } catch {
+                    guard id == diveID else { return }
+                    diving = false
+                    diveError = error.localizedDescription
+                }
+            }
+        }
+        return true
+    }
+
+    private func push(_ level: Level) {
+        withAnimation(.easeOut(duration: 0.2)) { levels.push(level) }
+    }
+
+    /// Esc: back one level, restoring the list it covered.
+    func pop() {
+        guard let level = levels.top else { return }
+        inspectorOpen = false
+        editing = false
+        selectedContainer = nil
+        containers = []
+        if case .table = level.children, let t = belowTables.popLast() { table = t }
+        selection = level.covered.selection
+        withAnimation(.easeOut(duration: 0.2)) { _ = levels.pop() }
+    }
+
+    /// Back to the tab's own list (kind or namespace changed).
+    func clearStack() {
+        diveID += 1
+        diving = false
+        diveError = nil
+        guard !levels.isEmpty else { return }
+        inspectorOpen = false
+        editing = false
+        selectedContainer = nil
+        containers = []
+        if let root = belowTables.first { table = root }
+        belowTables = []
+        levels.clear()
     }
 
     /// Feed context.state events (from any subscription of this tab) here.

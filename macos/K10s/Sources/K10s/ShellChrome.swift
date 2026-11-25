@@ -139,7 +139,7 @@ struct KindsSidebar: View {
                     .lineLimit(1)
                 Spacer()
                 if selected {
-                    Text("\(tab.table.totalCount)").font(Hy.mono(11)).foregroundStyle(Hy.faint)
+                    Text("\(tab.tableAt(0).totalCount)").font(Hy.mono(11)).foregroundStyle(Hy.faint)
                 }
             }
             .padding(.horizontal, Hy.s3)

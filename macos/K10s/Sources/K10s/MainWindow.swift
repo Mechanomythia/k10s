@@ -121,7 +121,7 @@ struct MainWindow: View {
                     OverviewPane(tab: tab)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    ListPane(tab: tab)
+                    LevelsView(tab: tab)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 if tab.inspectorOpen && !tab.showingOverview {
@@ -142,7 +142,8 @@ struct MainWindow: View {
         .sheet(item: $tab.pendingAction) { PendingActionSheet(pending: $0) }
         .focusedSceneValue(\.tabModel, tab)
         .onAppear { tab.openScope = { openWindow(value: $0) } }
-        .task(id: engine.restarts) { await tab.load(engine) }
+        .onChange(of: tab.namespace) { tab.clearStack() }
+        .task(id: engine.restarts) { tab.engine = engine; await tab.load(engine) }
         .task(id: engine.restarts) { await tab.watchNamespaces(engine) }
     }
 }

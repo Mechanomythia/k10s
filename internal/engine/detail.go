@@ -8,6 +8,7 @@ import (
 	"sort"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -36,6 +37,7 @@ func (d *Detail) Register(s *Server) {
 	s.Handlers[MethodObjectYAML] = mapAPIErrors(d.yaml)
 	s.Handlers[MethodObjectDescribe] = mapAPIErrors(d.describe)
 	s.Handlers[MethodObjectEvents] = mapAPIErrors(d.events)
+	s.Handlers[MethodObjectChildren] = mapAPIErrors(d.children)
 	s.Handlers[MethodPodContainers] = mapAPIErrors(d.podContainers)
 	s.Handlers[MethodObjectDelete] = mapAPIErrors(d.delete)
 	s.Handlers[MethodWorkloadScale] = mapAPIErrors(d.scale)
@@ -129,14 +131,40 @@ func (d *Detail) podContainers(ctx context.Context, raw json.RawMessage) (any, e
 	if err != nil {
 		return nil, err
 	}
-	res := PodContainersResult{Containers: []string{}, InitContainers: []string{}}
+	res := PodContainersResult{Containers: []string{}, InitContainers: []string{}, Statuses: []ContainerStatus{}}
 	for _, c := range pod.Spec.Containers {
 		res.Containers = append(res.Containers, c.Name)
+		res.Statuses = append(res.Statuses, containerStatus(c, pod.Status.ContainerStatuses, false))
 	}
 	for _, c := range pod.Spec.InitContainers {
 		res.InitContainers = append(res.InitContainers, c.Name)
+		res.Statuses = append(res.Statuses, containerStatus(c, pod.Status.InitContainerStatuses, true))
 	}
 	return res, nil
+}
+
+// containerStatus joins a spec container with its status by name; a container
+// with no status yet is Waiting.
+func containerStatus(c corev1.Container, statuses []corev1.ContainerStatus, init bool) ContainerStatus {
+	out := ContainerStatus{Name: c.Name, Init: init, Image: c.Image, State: "Waiting"}
+	for _, s := range statuses {
+		if s.Name != c.Name {
+			continue
+		}
+		out.Ready, out.Restarts = s.Ready, int(s.RestartCount)
+		switch {
+		case s.State.Running != nil:
+			out.State = "Running"
+		case s.State.Waiting != nil && s.State.Waiting.Reason != "":
+			out.State = "Waiting: " + s.State.Waiting.Reason
+		case s.State.Terminated != nil:
+			out.State = "Terminated"
+			if r := s.State.Terminated.Reason; r != "" {
+				out.State += ": " + r
+			}
+		}
+	}
+	return out
 }
 
 func (d *Detail) describe(ctx context.Context, raw json.RawMessage) (any, error) {

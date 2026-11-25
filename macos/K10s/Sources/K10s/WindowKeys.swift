@@ -42,13 +42,15 @@ struct WindowKeys: NSViewRepresentable {
         if isCtrlD { return tab.request(.delete) }
 
         if isEscape {
+            if tab.diveError != nil { tab.diveError = nil; return true }
             if tab.inspectorOpen { tab.inspectorOpen = false; return true }
             if tab.table.healthFilter != nil { tab.table.healthFilter = nil; return true }
             if !tab.filter.isEmpty { tab.filter = ""; return true }
+            if !tab.levels.isEmpty { tab.pop(); return true }
             return false
         }
         if isReturn {
-            _ = tab.openInspector(.describe)
+            tab.activate()
             return true
         }
         switch event.keyCode {
@@ -65,7 +67,7 @@ struct WindowKeys: NSViewRepresentable {
         case "y": _ = tab.openInspector(.yaml)
         case "v": _ = tab.openInspector(.events)
         case "e": tab.edit()
-        case "s": return tab.request(tab.kind?.isPod == true ? .shell : .scale)
+        case "s": return tab.request(tab.activeKind?.isPod == true ? .shell : .scale)
         case "F": return tab.request(.portForward)
         case "r": return tab.request(.restart)
         case "c": tab.copyName()
@@ -101,6 +103,13 @@ final class KeyMonitorView: NSView {
 extension TabModel {
     /// Moves the selection through the visible rows; selects the first (or last) when none is selected.
     func moveSelection(_ delta: Int) {
+        if inContainers {
+            guard !containers.isEmpty else { return }
+            let cur = containers.firstIndex { $0.name == selectedContainer }
+            let next = cur.map { min(max($0 + delta, 0), containers.count - 1) } ?? 0
+            selectedContainer = containers[next].name
+            return
+        }
         let rows = table.rows
         guard !rows.isEmpty else { return }
         let current = selection.flatMap { s in
@@ -110,11 +119,18 @@ extension TabModel {
         selection = rows[next]
     }
 
+    /// Return and double-click: logs of the container, dive into children, else Describe.
+    func activate() {
+        if diving || showingOverview { return }
+        if inContainers { _ = openInspector(.logs) } else if !diveIn() { _ = openInspector(.describe) }
+    }
+
     /// Opens the inspector on a view for the selected row; Logs only for pods.
     @discardableResult
     func openInspector(_ view: InspectorTab) -> Bool {
-        guard selection != nil else { return false }
-        if view == .logs, !(kind?.kind == "Pod" && kind?.group.isEmpty == true) { return false }
+        guard activeSelection != nil else { return false }
+        if view == .logs, activeKind?.isPod != true { return false }
+        if view == .logs, inContainers { presetContainer = selectedContainer }
         inspectorTab = view
         inspectorOpen = true
         return true

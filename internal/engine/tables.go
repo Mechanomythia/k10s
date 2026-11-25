@@ -60,7 +60,8 @@ type watchKey struct {
 	resource  ResourceRef
 	namespace string // "" for every namespace or a cluster-scoped kind
 	selector  string
-	field     string // field selector; engine-internal (the overview's Warning events)
+	field     string // field selector: TableSubscribeParams.FieldSelector, or the overview's Warning events
+	owner     string // owner uid: only rows this object owns
 }
 
 // watchSub is what joins a shared watch: a table subscription, or an
@@ -87,7 +88,7 @@ func (t *Tables) subscribe(ctx context.Context, params json.RawMessage) (func(Em
 		stop := t.conns.Listen(s.state)
 		var ws []*sharedWatch
 		for _, name := range p.Contexts {
-			w := t.acquire(watchKey{context: name, resource: p.Resource, namespace: ns, selector: p.LabelSelector})
+			w := t.acquire(watchKey{context: name, resource: p.Resource, namespace: ns, selector: p.LabelSelector, field: p.FieldSelector, owner: p.OwnerUID})
 			w.join(s)
 			ws = append(ws, w)
 		}
@@ -340,8 +341,9 @@ func (w *sharedWatch) list(ctx context.Context) error {
 	}
 	rows, caps := map[string]Row{}, map[string]capacity{}
 	for _, r := range tbl.Rows {
-		row, _, c := w.row(r)
-		rows[row.UID], caps[row.UID] = row, c
+		if row, _, c, owned := w.row(r); owned {
+			rows[row.UID], caps[row.UID] = row, c
+		}
 	}
 	w.rv = tbl.ResourceVersion
 	w.conns.state(w.key.context, StateLive, "", "")
@@ -390,10 +392,20 @@ func (w *sharedWatch) watch(ctx context.Context, backoff *time.Duration) error {
 		*backoff = minBackoff
 		w.mu.Lock()
 		for _, r := range tbl.Rows {
-			row, rv, c := w.row(r)
+			row, rv, c, owned := w.row(r)
 			w.rv = rv
-			switch ev.Type {
-			case "ADDED", "MODIFIED":
+			_, present := w.baseRows[row.UID]
+			deleted := ev.Type == "DELETED"
+			switch {
+			case deleted && (owned || present) || !deleted && !owned && present:
+				// A row that lost its owner is gone like a deleted one.
+				delete(w.baseRows, row.UID)
+				delete(w.caps, row.UID)
+				delete(w.rows, row.UID)
+				for s := range w.subs {
+					s.remove(row)
+				}
+			case owned && !deleted:
 				w.baseRows[row.UID], w.caps[row.UID] = row, c
 				if w.mh != nil && w.avail {
 					usage, _ := w.mh.Usage()
@@ -402,13 +414,6 @@ func (w *sharedWatch) watch(ctx context.Context, backoff *time.Duration) error {
 				w.rows[row.UID] = row
 				for s := range w.subs {
 					s.upsert(w.key.context, w.columns, row)
-				}
-			case "DELETED":
-				delete(w.baseRows, row.UID)
-				delete(w.caps, row.UID)
-				delete(w.rows, row.UID)
-				for s := range w.subs {
-					s.remove(row)
 				}
 			}
 		}
@@ -469,8 +474,9 @@ func (w *sharedWatch) path() string {
 }
 
 // row turns a Table row, whose object is the full object, into a Row and
-// the object's resource version and, for pods and nodes, its capacity.
-func (w *sharedWatch) row(r metav1.TableRow) (Row, string, capacity) {
+// the object's resource version, its capacity (pods and nodes with metrics)
+// and whether the watch's owner uid keeps it (always without an owner).
+func (w *sharedWatch) row(r metav1.TableRow) (row Row, rv string, c capacity, owned bool) {
 	obj := &unstructured.Unstructured{}
 	_ = utiljson.Unmarshal(r.Object.Raw, &obj.Object) // integers as int64, as HealthOf's Nested* reads expect
 	cells := make([]string, len(r.Cells))
@@ -479,11 +485,14 @@ func (w *sharedWatch) row(r metav1.TableRow) (Row, string, capacity) {
 			cells[i] = fmt.Sprint(c)
 		}
 	}
-	var c capacity
 	if w.mh != nil {
 		if c = podCapacity(obj.Object); w.nodes {
 			c = nodeCapacity(obj.Object)
 		}
+	}
+	owned = w.key.owner == ""
+	for _, o := range obj.GetOwnerReferences() {
+		owned = owned || string(o.UID) == w.key.owner
 	}
 	return Row{
 		Context:   w.key.context,
@@ -493,7 +502,7 @@ func (w *sharedWatch) row(r metav1.TableRow) (Row, string, capacity) {
 		Cells:     cells,
 		Health:    HealthOf(obj, time.Now()),
 		facts:     factsOf(w.key.resource, obj.Object),
-	}, obj.GetResourceVersion(), c
+	}, obj.GetResourceVersion(), c, owned
 }
 
 // tableSub is one table.subscribe: it merges the rows of its contexts'

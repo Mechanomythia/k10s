@@ -1,4 +1,4 @@
-# ADR 0006: Fleet overview and CPU/memory metrics
+# ADR 0007: Fleet overview and CPU/memory metrics
 
 - **Status:** Accepted
 - **Date:** 2026-11-25

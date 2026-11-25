@@ -1,7 +1,7 @@
 import K10sCore
 import SwiftUI
 
-/// Overview of a multi-context tab: one row per cluster (ADR 0006, frame 14).
+/// Overview of a multi-context tab: one row per cluster (ADR 0007, frame 14).
 struct OverviewFleet: View {
     var tab: TabModel
     @Environment(EngineClient.self) private var engine

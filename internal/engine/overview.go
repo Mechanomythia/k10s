@@ -15,7 +15,7 @@ import (
 
 // Overview serves overview.subscribe: one summary per context, aggregated
 // in-process from the shared Table watches and the node metrics poller
-// (ADR 0006, decision 2).
+// (ADR 0007, decision 2).
 type Overview struct {
 	Tables   *Tables
 	Throttle time.Duration // least time between two summaries of a context

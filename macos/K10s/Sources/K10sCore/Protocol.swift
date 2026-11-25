@@ -13,6 +13,7 @@ public enum Method {
     public static let objectYAML = "object.yaml"
     public static let objectDescribe = "object.describe"
     public static let objectEvents = "object.events"
+    public static let objectChildren = "object.children"
     public static let podContainers = "pod.containers"
     public static let logsSubscribe = "logs.subscribe"
     public static let objectDelete = "object.delete"
@@ -171,14 +172,20 @@ public struct TableSubscribeParams: Codable {
     public var namespace: String?
     public var allNamespaces: Bool?
     public var labelSelector: String?
+    public var fieldSelector: String?
+    /// Keeps the rows whose object has an owner reference with this uid.
+    public var ownerUID: String?
 
     public init(contexts: [String], resource: ResourceRef, namespace: String? = nil,
-                allNamespaces: Bool? = nil, labelSelector: String? = nil) {
+                allNamespaces: Bool? = nil, labelSelector: String? = nil,
+                fieldSelector: String? = nil, ownerUID: String? = nil) {
         self.contexts = contexts
         self.resource = resource
         self.namespace = namespace
         self.allNamespaces = allNamespaces
         self.labelSelector = labelSelector
+        self.fieldSelector = fieldSelector
+        self.ownerUID = ownerUID
     }
 }
 
@@ -247,6 +254,34 @@ public struct PodContainersParams: Codable {
 public struct PodContainersResult: Codable {
     public let containers: [String]
     public let initContainers: [String]
+    public let statuses: [ContainerStatus]
+}
+
+/// One container's image, readiness, state ("Running", "Waiting: <reason>",
+/// "Terminated: <reason>") and restarts. `isInit` is the Go key "init".
+public struct ContainerStatus: Codable, Hashable {
+    public let name: String
+    public var isInit: Bool?
+    public let image: String
+    public let ready: Bool
+    public let state: String
+    public let restarts: Int
+
+    enum CodingKeys: String, CodingKey {
+        case name, image, ready, state, restarts
+        case isInit = "init"
+    }
+}
+
+/// Result of object.children: the table.subscribe filters that list a parent's
+/// children. `none` means the parent selects nothing: do not subscribe.
+public struct ChildrenResult: Codable {
+    public let resource: ResourceRef
+    public var namespace: String?
+    public var labelSelector: String?
+    public var fieldSelector: String?
+    public var ownerUID: String?
+    public var none: Bool?
 }
 
 public struct ObjectParams: Codable {
