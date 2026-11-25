@@ -1,1 +1,1 @@
-{"containers":["app","sidecar"],"initContainers":["init-db"]}
+{"containers":["app","sidecar"],"initContainers":["init-db"],"statuses":[{"name":"app","image":"nginx:1.27","ready":true,"state":"Running","restarts":2},{"name":"init-db","init":true,"image":"busybox:1","ready":true,"state":"Terminated: Completed","restarts":0}]}

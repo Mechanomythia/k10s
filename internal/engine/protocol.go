@@ -227,10 +227,23 @@ type PodContainersParams struct {
 }
 
 // PodContainersResult is the result of pod.containers: the container names
-// from the pod spec, in spec order; both lists are always present.
+// from the pod spec, in spec order, and each container's status (regular
+// containers first, then init containers); all lists are always present.
 type PodContainersResult struct {
-	Containers     []string `json:"containers"`
-	InitContainers []string `json:"initContainers"`
+	Containers     []string          `json:"containers"`
+	InitContainers []string          `json:"initContainers"`
+	Statuses       []ContainerStatus `json:"statuses"`
+}
+
+// ContainerStatus is one container's image, readiness, state and restarts.
+// State is the kubectl word: Running, Waiting: <reason>, Terminated: <reason>.
+type ContainerStatus struct {
+	Name     string `json:"name"`
+	Init     bool   `json:"init,omitempty"`
+	Image    string `json:"image"`
+	Ready    bool   `json:"ready"`
+	State    string `json:"state"`
+	Restarts int    `json:"restarts"`
 }
 
 // ObjectParams are the params of object.yaml and object.describe.
