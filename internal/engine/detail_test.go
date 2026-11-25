@@ -402,3 +402,37 @@ func TestLogsCancelStops(t *testing.T) {
 		t.Error("stream not closed after cancel")
 	}
 }
+
+func TestPodContainers(t *testing.T) {
+	pod := podWith("app", "sidecar")
+	pod.Spec.InitContainers = []corev1.Container{{Name: "init-db"}}
+	d := detailEnv(t, nil, kfake.NewSimpleClientset(pod), nil)
+	var res PodContainersResult
+	if err := call(t, d.podContainers, PodContainersParams{Context: "c", Namespace: "ns", Name: "p"}, &res); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(res.Containers, ",") != "app,sidecar" || strings.Join(res.InitContainers, ",") != "init-db" {
+		t.Errorf("res = %+v", res)
+	}
+	if err := call(t, d.podContainers, PodContainersParams{Context: "c", Namespace: "ns", Name: "nope"}, nil); err == nil {
+		t.Error("unknown pod: want error")
+	}
+}
+
+func TestLiveStateCarriesVersion(t *testing.T) {
+	d := detailEnv(t, nil, kfake.NewSimpleClientset(), nil)
+	var got []ContextStateChange
+	defer d.Conns.Listen(func(s ContextStateChange) { got = append(got, s) })()
+	cn, err := d.Conns.Get(context.Background(), "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cn.Version != "v1.31.0" || len(got) != 2 || got[1].State != StateLive || got[1].Version != "v1.31.0" || got[0].Version != "" {
+		t.Errorf("version=%q states=%+v", cn.Version, got)
+	}
+	var replay []ContextStateChange
+	defer d.Conns.Listen(func(s ContextStateChange) { replay = append(replay, s) })()
+	if len(replay) != 1 || replay[0].Version != "v1.31.0" {
+		t.Errorf("replay = %+v", replay)
+	}
+}

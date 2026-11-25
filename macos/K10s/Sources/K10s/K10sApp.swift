@@ -11,10 +11,12 @@ struct K10sApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
-            StubWindow().environment(engine)
+        WindowGroup(for: TabScope.self) { $scope in
+            WindowRoot(scope: $scope).environment(engine)
         }
+        .windowStyle(.hiddenTitleBar)
         .commands {
+            ShellCommands()
             CommandGroup(after: .appInfo) {
                 Button("Check for updates…") { updater.checkNow() }
                     .disabled(!updater.canCheck)

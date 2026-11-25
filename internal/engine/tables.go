@@ -185,7 +185,7 @@ func (w *sharedWatch) run(ctx context.Context) {
 			return
 		}
 		if err != nil && !errors.Is(err, errReported) {
-			w.conns.state(w.key.context, classify(err), redact(err.Error()))
+			w.conns.state(w.key.context, classify(err), redact(err.Error()), "")
 		}
 		select {
 		case <-ctx.Done():
@@ -228,7 +228,7 @@ func (w *sharedWatch) list(ctx context.Context) error {
 		rows[row.UID] = row
 	}
 	w.rv = tbl.ResourceVersion
-	w.conns.state(w.key.context, StateLive, "")
+	w.conns.state(w.key.context, StateLive, "", "")
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.listed, w.columns, w.rows = true, cols, rows
@@ -246,7 +246,7 @@ func (w *sharedWatch) watch(ctx context.Context, backoff *time.Duration) error {
 		return err
 	}
 	defer body.Close()
-	w.conns.state(w.key.context, StateLive, "")
+	w.conns.state(w.key.context, StateLive, "", "")
 	dec := json.NewDecoder(body)
 	for {
 		var ev struct {

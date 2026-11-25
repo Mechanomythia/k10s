@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>k10s: Pods in prod-eu</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="k10s.css">
+<link rel="stylesheet" href="ds/hyad/components/bundle.css">
+<script src="ds/hyad/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600&amp;family=Literata:opsz,wght@7..72,300;7..72,400&amp;family=Spline+Sans+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}a{color:#bdd1ff}a:hover{color:#ece7dd}</style>
+</helmet>
+<div class="win">
+  <div class="toolbar">
+    <div class="lights" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="scope">
+      <span class="label">Context</span>
+      <span class="ctx"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s12 }}" show-label="{{ no }}"></x-import>prod-eu</span>
+    </div>
+    <div class="sep"></div>
+    <button class="picker" type="button"><span class="k">Namespace</span><span class="mono">payments</span></button>
+    <input class="filter" type="text" aria-label="Filter" placeholder="/ filter by name or label">
+    <div class="grow"></div>
+    <span class="kbd">:</span><span style="color: var(--dust); font-size: 12px;">command</span>
+  </div>
+  <nav class="tabs" aria-label="Tabs">
+    <a class="tab on" href="#"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s9 }}" show-label="{{ no }}"></x-import>prod-eu<span class="n">⌘1</span></a>
+    <a class="tab" href="MultiContext.dc.html"><x-import component-from-global-scope="Hyad.Star" state="degraded" size="{{ s9 }}" show-label="{{ no }}"></x-import>prod · 3 clusters<span class="n">⌘2</span></a>
+    <a class="tab" href="#"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s9 }}" show-label="{{ no }}"></x-import>staging<span class="n">⌘3</span></a>
+    <a class="tab add" href="NewTab.dc.html" aria-label="New tab">New tab ⌘T</a>
+  </nav>
+  <div class="body">
+    <nav class="side" aria-label="Kinds">
+      <span class="label">Workloads</span>
+      <a class="on" href="#">Pods<span class="c">42</span></a>
+      <a href="MultiContext.dc.html">Deployments<span class="c">14</span></a>
+      <a href="#">StatefulSets<span class="c">3</span></a>
+      <a href="#">DaemonSets<span class="c">4</span></a>
+      <a href="#">Jobs<span class="c">9</span></a>
+      <a href="#">CronJobs<span class="c">5</span></a>
+      <span class="label">Network</span>
+      <a href="#">Services<span class="c">17</span></a>
+      <a href="#">Ingresses<span class="c">4</span></a>
+      <span class="label">Config</span>
+      <a href="#">ConfigMaps<span class="c">21</span></a>
+      <a href="#">Secrets<span class="c">30</span></a>
+      <span class="label">Cluster</span>
+      <a href="#">Nodes<span class="c">6</span></a>
+      <a href="#">Namespaces<span class="c">11</span></a>
+      <a href="#">Events<span class="c">208</span></a>
+      <span class="label">Custom resources</span>
+      <a href="#">certificates<span class="c">8</span></a>
+      <a href="#">kafkatopics<span class="c">26</span></a>
+    </nav>
+    <section class="list">
+      <div class="head">
+        <h1>Pods</h1>
+        <span class="meta">42 in payments · watching</span>
+      </div>
+      <table class="tbl">
+        <thead><tr><th aria-label="Health"></th><th>Name</th><th>Ready</th><th>Status</th><th>Restarts</th><th>Age</th><th>IP</th><th>Node</th></tr></thead>
+        <tbody>
+          <sc-for list="{{ pods }}" as="p" hint-placeholder-count="12">
+            <tr class="{{ p.cls }}">
+              <td><x-import component-from-global-scope="Hyad.Star" state="{{ p.state }}" size="{{ s12 }}" show-label="{{ no }}"></x-import></td>
+              <td>{{ p.name }}</td>
+              <td>{{ p.ready }}</td>
+              <td class="{{ p.statusCls }}">{{ p.status }}</td>
+              <td class="{{ p.restartCls }}">{{ p.restarts }}</td>
+              <td class="d">{{ p.age }}</td>
+              <td class="f">{{ p.ip }}</td>
+              <td class="f">{{ p.node }}</td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </section>
+    <aside class="insp" aria-label="Inspector">
+      <div class="insp-h">
+        <span class="t">checkout-api-7d9f8b6c4-x2kqp</span>
+        <span class="s">Pod · payments · prod-eu</span>
+      </div>
+      <nav class="seg" aria-label="Inspector views">
+        <a class="on" href="#">Describe<span class="kbd">d</span></a>
+        <a href="#">YAML<span class="kbd">y</span></a>
+        <a href="#">Events<span class="kbd">e</span></a>
+        <a href="Logs.dc.html">Logs<span class="kbd">l</span></a>
+      </nav>
+<pre class="pre"><span class="k">Name:</span>             checkout-api-7d9f8b6c4-x2kqp
+<span class="k">Namespace:</span>        payments
+<span class="k">Priority:</span>         0
+<span class="k">Service Account:</span>  checkout-api
+<span class="k">Node:</span>             gke-prod-eu-pool-2-a81f/10.4.2.17
+<span class="k">Start Time:</span>       Tue, 25 Nov 2026 09:12:44 +0100
+<span class="k">Labels:</span>           app=checkout-api
+                  pod-template-hash=7d9f8b6c4
+<span class="k">Status:</span>           Running
+<span class="k">IP:</span>               10.8.3.41
+<span class="k">Controlled By:</span>    ReplicaSet/checkout-api-7d9f8b6c4
+<span class="k">Containers:</span>
+  api:
+    <span class="k">Image:</span>          europe-docker.pkg.dev/acme/checkout-api:4.12.0
+    <span class="k">Port:</span>           8080/TCP
+    <span class="k">State:</span>          Running
+      <span class="k">Started:</span>      Tue, 25 Nov 2026 09:12:51 +0100
+    <span class="k">Ready:</span>          True
+    <span class="k">Restart Count:</span>  0
+    <span class="k">Limits:</span>
+      cpu:     1
+      memory:  512Mi
+    <span class="k">Readiness:</span>      http-get :8080/healthz delay=5s
+  istio-proxy:
+    <span class="k">Image:</span>          docker.io/istio/proxyv2:1.24.2
+    <span class="k">State:</span>          Running
+    <span class="k">Ready:</span>          True
+<span class="k">Conditions:</span>
+  Type              Status
+  Initialized       True
+  Ready             True
+  ContainersReady   True
+<span class="k">Events:</span>           <span class="f">none in the last hour</span></pre>
+    </aside>
+  </div>
+  <footer class="status">
+    <span><span class="kbd">d</span> describe</span>
+    <span><span class="kbd">y</span> yaml</span>
+    <span><span class="kbd">l</span> logs</span>
+    <span><span class="kbd">/</span> filter</span>
+    <span><span class="kbd">:</span> command</span>
+    <span><span class="kbd">esc</span> back</span>
+    <span class="r">prod-eu · gke_acme-prod_europe-west4_prod-eu · v1.33.4 · read-only</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = (state, name, ready, status, restarts, age, ip, node, extra) => Object.assign({
+      state, name, ready, status, restarts, age, ip, node, cls: '', statusCls: '', restartCls: ''
+    }, extra || {});
+    return {
+      no: false, s9: 9, s12: 12,
+      pods: [
+        P('live', 'checkout-api-7d9f8b6c4-x2kqp', '2/2', 'Running', '0', '3h12m', '10.8.3.41', 'pool-2-a81f', { cls: 'sel' }),
+        P('live', 'checkout-api-7d9f8b6c4-m8wzt', '2/2', 'Running', '0', '3h12m', '10.8.1.22', 'pool-2-c03d'),
+        P('live', 'checkout-api-7d9f8b6c4-q4hvn', '2/2', 'Running', '0', '3h11m', '10.8.5.9', 'pool-2-77ae'),
+        P('failed', 'ledger-worker-5c6b9d7f8-kd2lp', '0/1', 'CrashLoopBackOff', '14', '52m', '10.8.2.61', 'pool-1-1b9c', { statusCls: 'm', restartCls: 'm' }),
+        P('degraded', 'ledger-worker-5c6b9d7f8-r7tnx', '1/1', 'Running', '3', '52m', '10.8.4.18', 'pool-1-4e20', { restartCls: 'k' }),
+        P('live', 'payments-gateway-6f8d5c9b7-2xjqs', '2/2', 'Running', '0', '2d4h', '10.8.1.73', 'pool-2-c03d'),
+        P('live', 'payments-gateway-6f8d5c9b7-9pwkd', '2/2', 'Running', '0', '2d4h', '10.8.3.12', 'pool-2-a81f'),
+        P('building', 'refunds-api-84c7b6d5f-zl4mc', '0/2', 'ContainerCreating', '0', '18s', '', 'pool-2-77ae'),
+        P('live', 'refunds-api-7b9f6c8d4-h2vkr', '2/2', 'Running', '0', '6d', '10.8.5.40', 'pool-2-77ae'),
+        P('stopped', 'invoice-export-29105760-8gq2c', '0/1', 'Completed', '0', '41m', '', 'pool-1-1b9c'),
+        P('live', 'fraud-score-55d8f7b6c-tx9mw', '1/1', 'Running', '1', '11d', '10.8.2.30', 'pool-1-4e20'),
+        P('live', 'redis-payments-0', '1/1', 'Running', '0', '34d', '10.8.6.5', 'pool-3-90ad'),
+        P('live', 'redis-payments-1', '1/1', 'Running', '0', '34d', '10.8.6.6', 'pool-3-5f17'),
+        P('live', 'webhook-relay-6b5f9d8c7-pq3ns', '1/1', 'Running', '0', '9d', '10.8.4.77', 'pool-1-4e20'),
+        P('live', 'webhook-relay-6b5f9d8c7-v6kxa', '1/1', 'Running', '0', '9d', '10.8.1.91', 'pool-2-c03d'),
+        P('live', 'settlement-cron-28fq1-0', '1/1', 'Running', '0', '4m', '10.8.3.88', 'pool-2-a81f')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

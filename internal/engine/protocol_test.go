@@ -30,6 +30,8 @@ var golden = map[string]func() any{
 	"table.context.state.live.event": func() any { return new(ContextStateChange) },
 	"object.yaml.params":             func() any { return new(ObjectParams) },
 	"object.yaml.result":             func() any { return new(TextResult) },
+	"pod.containers.params":          func() any { return new(PodContainersParams) },
+	"pod.containers.result":          func() any { return new(PodContainersResult) },
 	"object.describe.params":         func() any { return new(ObjectParams) },
 	"object.describe.result":         func() any { return new(TextResult) },
 	"object.events.params":           func() any { return new(ObjectEventsParams) },

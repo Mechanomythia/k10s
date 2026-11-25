@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>k10s: Deployments across three prod clusters</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="k10s.css">
+<link rel="stylesheet" href="ds/hyad/components/bundle.css">
+<script src="ds/hyad/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600&amp;family=Literata:opsz,wght@7..72,300;7..72,400&amp;family=Spline+Sans+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}a{color:#bdd1ff}a:hover{color:#ece7dd}</style>
+</helmet>
+<div class="win">
+  <div class="toolbar">
+    <div class="lights" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="scope">
+      <span class="label">Contexts</span>
+      <span class="ctx"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s12 }}" show-label="{{ no }}"></x-import>prod-eu</span>
+      <span class="ctx"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s12 }}" show-label="{{ no }}"></x-import>prod-us</span>
+      <span class="ctx down"><x-import component-from-global-scope="Hyad.Star" state="failed" size="{{ s12 }}" show-label="{{ no }}"></x-import>prod-ap</span>
+      <button class="picker" type="button" style="height: 24px; font-size: 12px;">Edit set</button>
+    </div>
+    <div class="sep"></div>
+    <button class="picker" type="button"><span class="k">Namespace</span><span class="mono">all</span></button>
+    <input class="filter" type="text" aria-label="Filter" value="checkout">
+    <div class="grow"></div>
+    <span class="kbd">:</span><span style="color: var(--dust); font-size: 12px;">command</span>
+  </div>
+  <nav class="tabs" aria-label="Tabs">
+    <a class="tab" href="Main.dc.html"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s9 }}" show-label="{{ no }}"></x-import>prod-eu<span class="n">⌘1</span></a>
+    <a class="tab on" href="#"><x-import component-from-global-scope="Hyad.Star" state="degraded" size="{{ s9 }}" show-label="{{ no }}"></x-import>prod · 3 clusters<span class="n">⌘2</span></a>
+    <a class="tab" href="#"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s9 }}" show-label="{{ no }}"></x-import>staging<span class="n">⌘3</span></a>
+    <a class="tab add" href="NewTab.dc.html" aria-label="New tab">New tab ⌘T</a>
+  </nav>
+  <div class="body">
+    <nav class="side" aria-label="Kinds">
+      <span class="label">Workloads</span>
+      <a href="#">Pods<span class="c">318</span></a>
+      <a class="on" href="#">Deployments<span class="c">96</span></a>
+      <a href="#">StatefulSets<span class="c">21</span></a>
+      <a href="#">DaemonSets<span class="c">12</span></a>
+      <a href="#">Jobs<span class="c">40</span></a>
+      <a href="#">CronJobs<span class="c">15</span></a>
+      <span class="label">Network</span>
+      <a href="#">Services<span class="c">110</span></a>
+      <a href="#">Ingresses<span class="c">22</span></a>
+      <span class="label">Config</span>
+      <a href="#">ConfigMaps<span class="c">140</span></a>
+      <a href="#">Secrets<span class="c">201</span></a>
+      <span class="label">Cluster</span>
+      <a href="#">Nodes<span class="c">18</span></a>
+      <a href="#">Namespaces<span class="c">33</span></a>
+      <a href="#">Events<span class="c">614</span></a>
+      <span class="label">Counts</span>
+      <span style="display: block; padding: 4px 16px; font-size: 12px; color: var(--faint);">Counts cover the two clusters that answer.</span>
+    </nav>
+    <section class="list">
+      <div class="head">
+        <h1>Deployments</h1>
+        <span class="meta">9 of 96 match “checkout” · 2 of 3 clusters</span>
+      </div>
+      <div class="notice-row" role="status">
+        <x-import component-from-global-scope="Hyad.Star" state="failed" size="{{ s16 }}" show-label="{{ no }}"></x-import>
+        <div style="display: flex; flex-direction: column; gap: 2px; flex: 1;">
+          <span class="t">prod-ap is unreachable. Its rows are left out.</span>
+          <span class="e">dial tcp 10.40.0.2:443: i/o timeout · retrying every 30 s</span>
+        </div>
+        <x-import component-from-global-scope="Hyad.Button" variant="secondary" size="s">Retry now</x-import>
+      </div>
+      <table class="tbl">
+        <thead><tr><th aria-label="Health"></th><th>Context</th><th>Namespace</th><th>Name</th><th>Ready</th><th>Up-to-date</th><th>Available</th><th>Age</th></tr></thead>
+        <tbody>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="9">
+            <tr class="{{ r.cls }}">
+              <td><x-import component-from-global-scope="Hyad.Star" state="{{ r.state }}" size="{{ s12 }}" show-label="{{ no }}"></x-import></td>
+              <td>{{ r.ctx }}</td>
+              <td class="d">{{ r.ns }}</td>
+              <td>{{ r.name }}</td>
+              <td class="{{ r.readyCls }}">{{ r.ready }}</td>
+              <td class="d">{{ r.upd }}</td>
+              <td class="d">{{ r.avail }}</td>
+              <td class="d">{{ r.age }}</td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+      <div style="padding: 16px 24px; display: flex; gap: 24px; font-size: 12px; color: var(--faint);">
+        <span>Sorted by name, then context. Rows with the same name in several clusters sit together.</span>
+      </div>
+    </section>
+    <aside class="insp" aria-label="Inspector">
+      <div class="insp-h">
+        <span class="t">checkout-api</span>
+        <span class="s">Deployment · payments · prod-us</span>
+      </div>
+      <nav class="seg" aria-label="Inspector views">
+        <a href="#">Describe<span class="kbd">d</span></a>
+        <a class="on" href="#">YAML<span class="kbd">y</span></a>
+        <a href="#">Events<span class="kbd">e</span></a>
+        <a href="#">Logs<span class="kbd">l</span></a>
+      </nav>
+<pre class="pre"><span class="k">apiVersion:</span> apps/v1
+<span class="k">kind:</span> Deployment
+<span class="k">metadata:</span>
+  <span class="k">name:</span> checkout-api
+  <span class="k">namespace:</span> payments
+  <span class="k">generation:</span> 41
+  <span class="k">labels:</span>
+    <span class="k">app:</span> checkout-api
+<span class="k">spec:</span>
+  <span class="k">replicas:</span> 3
+  <span class="k">selector:</span>
+    <span class="k">matchLabels:</span>
+      <span class="k">app:</span> checkout-api
+  <span class="k">strategy:</span>
+    <span class="k">type:</span> RollingUpdate
+    <span class="k">rollingUpdate:</span>
+      <span class="k">maxSurge:</span> 25%
+      <span class="k">maxUnavailable:</span> 0
+  <span class="k">template:</span>
+    <span class="k">spec:</span>
+      <span class="k">containers:</span>
+      - <span class="k">name:</span> api
+        <span class="k">image:</span> us-docker.pkg.dev/acme/checkout-api:4.13.0
+        <span class="k">ports:</span>
+        - <span class="k">containerPort:</span> 8080
+<span class="k">status:</span>
+  <span class="k">replicas:</span> 4
+  <span class="k">updatedReplicas:</span> 2
+  <span class="k">readyReplicas:</span> 3
+<span class="f"># managedFields hidden</span></pre>
+    </aside>
+  </div>
+  <footer class="status">
+    <span><span class="kbd">d</span> describe</span>
+    <span><span class="kbd">y</span> yaml</span>
+    <span><span class="kbd">l</span> logs</span>
+    <span><span class="kbd">/</span> filter</span>
+    <span><span class="kbd">:</span> command</span>
+    <span class="r">prod · prod-eu, prod-us, prod-ap · read-only</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const R = (state, ctx, ns, name, ready, upd, avail, age, extra) => Object.assign({
+      state, ctx, ns, name, ready, upd, avail, age, cls: '', readyCls: ''
+    }, extra || {});
+    return {
+      no: false, s9: 9, s12: 12, s16: 16,
+      rows: [
+        R('live', 'prod-eu', 'payments', 'checkout-api', '3/3', '3', '3', '41d'),
+        R('building', 'prod-us', 'payments', 'checkout-api', '3/3', '2', '3', '41d', { cls: 'sel' }),
+        R('live', 'prod-eu', 'payments', 'checkout-cart', '2/2', '2', '2', '87d'),
+        R('live', 'prod-us', 'payments', 'checkout-cart', '2/2', '2', '2', '87d'),
+        R('degraded', 'prod-eu', 'payments', 'checkout-events', '1/2', '2', '1', '12d', { readyCls: 'k' }),
+        R('live', 'prod-us', 'payments', 'checkout-events', '2/2', '2', '2', '12d'),
+        R('live', 'prod-eu', 'storefront', 'checkout-web', '4/4', '4', '4', '6d'),
+        R('live', 'prod-us', 'storefront', 'checkout-web', '6/6', '6', '6', '6d'),
+        R('stopped', 'prod-us', 'payments', 'checkout-replay', '0/0', '0', '0', '210d')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

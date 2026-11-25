@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>k10s: command bar</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="k10s.css">
+<link rel="stylesheet" href="ds/hyad/components/bundle.css">
+<script src="ds/hyad/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600&amp;family=Literata:opsz,wght@7..72,300;7..72,400&amp;family=Spline+Sans+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}a{color:#bdd1ff}a:hover{color:#ece7dd}
+.cmd{position:absolute;left:50%;top:120px;transform:translateX(-50%);width:640px;background:var(--sky-high);border:1px solid var(--neatline-strong);border-radius:var(--radius-2);box-shadow:var(--lift);overflow:hidden}
+.cmd-in{display:flex;align-items:center;gap:8px;height:48px;padding:0 16px;border-bottom:1px solid var(--neatline);font-family:var(--font-mono);font-size:16px}
+.cmd-in .p{color:var(--dust)}
+.cmd-in .caret{width:1px;height:20px;background:var(--starlight)}
+.cmd-grp{padding:8px 0}
+.cmd-grp .label{padding:4px 16px;display:block}
+.opt{display:flex;align-items:center;gap:12px;padding:0 16px;height:36px;font-size:13px;color:var(--starlight)}
+.opt.on{background:var(--sky-raised);box-shadow:inset 2px 0 0 var(--starlight)}
+.opt .nm{font-family:var(--font-mono);font-size:13px;min-width:180px}
+.opt .al{font-family:var(--font-mono);font-size:12px;color:var(--dust)}
+.opt .gv{margin-left:auto;font-family:var(--font-mono);font-size:11.5px;color:var(--faint)}
+.cmd-f{display:flex;gap:16px;padding:8px 16px;border-top:1px solid var(--neatline);font-size:12px;color:var(--dust)}
+</style>
+</helmet>
+<div class="win">
+  <div class="toolbar">
+    <div class="lights" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="scope">
+      <span class="label">Context</span>
+      <span class="ctx"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s12 }}" show-label="{{ no }}"></x-import>prod-eu</span>
+    </div>
+    <div class="sep"></div>
+    <button class="picker" type="button"><span class="k">Namespace</span><span class="mono">payments</span></button>
+    <input class="filter" type="text" aria-label="Filter" placeholder="/ filter by name or label">
+    <div class="grow"></div>
+  </div>
+  <nav class="tabs" aria-label="Tabs">
+    <a class="tab on" href="Main.dc.html"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s9 }}" show-label="{{ no }}"></x-import>prod-eu<span class="n">⌘1</span></a>
+    <a class="tab" href="MultiContext.dc.html"><x-import component-from-global-scope="Hyad.Star" state="degraded" size="{{ s9 }}" show-label="{{ no }}"></x-import>prod · 3 clusters<span class="n">⌘2</span></a>
+    <a class="tab" href="#"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s9 }}" show-label="{{ no }}"></x-import>staging<span class="n">⌘3</span></a>
+  </nav>
+  <div class="body">
+    <nav class="side" aria-label="Kinds">
+      <span class="label">Workloads</span>
+      <a class="on" href="#">Pods<span class="c">42</span></a>
+      <a href="#">Deployments<span class="c">14</span></a>
+      <a href="#">StatefulSets<span class="c">3</span></a>
+      <a href="#">DaemonSets<span class="c">4</span></a>
+      <a href="#">Jobs<span class="c">9</span></a>
+      <span class="label">Network</span>
+      <a href="#">Services<span class="c">17</span></a>
+      <a href="#">Ingresses<span class="c">4</span></a>
+    </nav>
+    <section class="list">
+      <div class="head"><h1>Pods</h1><span class="meta">42 in payments · watching</span></div>
+      <table class="tbl">
+        <thead><tr><th aria-label="Health"></th><th>Name</th><th>Ready</th><th>Status</th><th>Restarts</th><th>Age</th></tr></thead>
+        <tbody>
+          <sc-for list="{{ pods }}" as="p" hint-placeholder-count="8">
+            <tr><td><x-import component-from-global-scope="Hyad.Star" state="{{ p.state }}" size="{{ s12 }}" show-label="{{ no }}"></x-import></td><td>{{ p.name }}</td><td>{{ p.ready }}</td><td>{{ p.status }}</td><td>{{ p.restarts }}</td><td class="d">{{ p.age }}</td></tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </section>
+  </div>
+  <footer class="status"><span><span class="kbd">:</span> command</span><span class="r">prod-eu · read-only</span></footer>
+  <div style="position: absolute; inset: 0; background: var(--scrim);"></div>
+  <div class="cmd" role="dialog" aria-label="Command">
+    <div class="cmd-in"><span class="p">:</span><span>dep</span><span class="caret" aria-hidden="true"></span></div>
+    <div class="cmd-grp">
+      <span class="label">Kinds</span>
+      <div class="opt on"><span class="nm">deployments</span><span class="al">deploy, dp</span><span class="gv">apps/v1</span></div>
+      <div class="opt"><span class="nm">deploymentrollouts</span><span class="al">dro</span><span class="gv">argoproj.io/v1alpha1</span></div>
+    </div>
+    <div class="cmd-grp" style="border-top: 1px solid var(--neatline);">
+      <span class="label">Also try</span>
+      <div class="opt"><span class="nm">:ctx prod-us</span><span class="al">open prod-us in this tab</span></div>
+      <div class="opt"><span class="nm">:ctx prod-eu,prod-us</span><span class="al">read both in this tab</span></div>
+      <div class="opt"><span class="nm">:ns kube-system</span><span class="al">switch namespace</span></div>
+      <div class="opt"><span class="nm">:set all prod</span><span class="al">open a saved context set</span></div>
+    </div>
+    <div class="cmd-f"><span><span class="kbd">↵</span> open</span><span><span class="kbd">⇥</span> complete</span><span><span class="kbd">⌘↵</span> open in new tab</span><span><span class="kbd">esc</span> close</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = (state, name, ready, status, restarts, age) => ({ state, name, ready, status, restarts, age });
+    return {
+      no: false, s9: 9, s12: 12,
+      pods: [
+        P('live', 'checkout-api-7d9f8b6c4-x2kqp', '2/2', 'Running', '0', '3h12m'),
+        P('live', 'checkout-api-7d9f8b6c4-m8wzt', '2/2', 'Running', '0', '3h12m'),
+        P('failed', 'ledger-worker-5c6b9d7f8-kd2lp', '0/1', 'CrashLoopBackOff', '14', '52m'),
+        P('degraded', 'ledger-worker-5c6b9d7f8-r7tnx', '1/1', 'Running', '3', '52m'),
+        P('live', 'payments-gateway-6f8d5c9b7-2xjqs', '2/2', 'Running', '0', '2d4h'),
+        P('building', 'refunds-api-84c7b6d5f-zl4mc', '0/2', 'ContainerCreating', '0', '18s'),
+        P('stopped', 'invoice-export-29105760-8gq2c', '0/1', 'Completed', '0', '41m'),
+        P('live', 'redis-payments-0', '1/1', 'Running', '0', '34d')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

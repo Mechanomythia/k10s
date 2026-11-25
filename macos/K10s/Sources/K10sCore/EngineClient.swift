@@ -75,6 +75,12 @@ public final class EngineClient {
                     if case .success(let v) = r { onResult(v) }
                     cont.resume(with: r)
                 }
+                // A request the engine never answers fails visibly instead of waiting forever.
+                Task { [weak self] in
+                    try? await Task.sleep(for: .seconds(20))
+                    guard let self, let done = self.pending.removeValue(forKey: id) else { return }
+                    done(.failure(EngineFailure("The engine did not answer \(method) within 20 seconds.")))
+                }
             } catch {
                 cont.resume(throwing: error)
             }
