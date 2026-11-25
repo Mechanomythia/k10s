@@ -40,6 +40,12 @@ var golden = map[string]func() any{
 	"logs.lines.event":               func() any { return new(Lines) },
 	"logs.end.event":                 func() any { return new(End) },
 	"logs.end.error.event":           func() any { return new(End) },
+	"object.delete.params":           func() any { return new(ObjectParams) },
+	"workload.restart.params":        func() any { return new(ObjectParams) },
+	"workload.scale.params":          func() any { return new(ScaleParams) },
+	"object.replace.params":          func() any { return new(ReplaceParams) },
+	"object.replace.result":          func() any { return new(ReplaceResult) },
+	"table.forbidden.event":          func() any { return new(Forbidden) },
 }
 
 func TestGolden(t *testing.T) {

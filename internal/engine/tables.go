@@ -144,6 +144,7 @@ type sharedWatch struct {
 	mu      sync.Mutex // guards the rest; held while calling subscribers, so they see events in order
 	subs    map[*tableSub]bool
 	listed  bool
+	denied  string // the last 403 message, until a list succeeds
 	columns []Column
 	rows    map[string]Row // by uid, cells in columns order
 }
@@ -154,6 +155,9 @@ func (w *sharedWatch) join(s *tableSub) {
 	w.subs[s] = true
 	if w.listed {
 		s.reset(w.key.context, w.columns, w.rows)
+	}
+	if w.denied != "" {
+		s.forbidden(w.key.context, w.denied)
 	}
 }
 
@@ -184,7 +188,10 @@ func (w *sharedWatch) run(ctx context.Context) {
 		if ctx.Err() != nil {
 			return
 		}
-		if err != nil && !errors.Is(err, errReported) {
+		if apierrors.IsForbidden(err) {
+			w.deny(err)
+			backoff = maxBackoff // never retry a refused kind in a tight loop
+		} else if err != nil && !errors.Is(err, errReported) {
 			w.conns.state(w.key.context, classify(err), redact(err.Error()), "")
 		}
 		select {
@@ -193,6 +200,21 @@ func (w *sharedWatch) run(ctx context.Context) {
 		case <-time.After(backoff):
 		}
 		backoff = min(backoff*2, maxBackoff)
+	}
+}
+
+// deny tells every subscriber that the API server refused this kind (403).
+// The context's state is left alone.
+func (w *sharedWatch) deny(err error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	msg := redact(err.Error())
+	if msg == w.denied {
+		return // already told
+	}
+	w.denied = msg
+	for s := range w.subs {
+		s.forbidden(w.key.context, w.denied)
 	}
 }
 
@@ -231,7 +253,7 @@ func (w *sharedWatch) list(ctx context.Context) error {
 	w.conns.state(w.key.context, StateLive, "", "")
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	w.listed, w.columns, w.rows = true, cols, rows
+	w.listed, w.columns, w.rows, w.denied = true, cols, rows, ""
 	for s := range w.subs {
 		s.reset(w.key.context, cols, rows)
 	}
@@ -392,6 +414,19 @@ func (s *tableSub) state(ch ContextStateChange) {
 		s.answered[ch.Context] = true
 		s.maybeSnapshot()
 	}
+}
+
+// forbidden reports a 403 on this kind for one context: the table has no rows
+// from it, and its state is untouched.
+func (s *tableSub) forbidden(name, msg string) {
+	if !slices.Contains(s.contexts, name) {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.send(EventForbidden, Forbidden{Context: name, Message: msg})
+	s.answered[name] = true
+	s.maybeSnapshot()
 }
 
 // reset replaces a context's rows after a (re-)list.

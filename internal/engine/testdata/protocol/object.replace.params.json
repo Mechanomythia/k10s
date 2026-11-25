@@ -1,0 +1,1 @@
+{"context":"prod-eu","resource":{"version":"v1","plural":"configmaps"},"namespace":"default","name":"cfg","yaml":"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cfg\n  namespace: default\n  resourceVersion: \"42\"\ndata:\n  k: v\n"}

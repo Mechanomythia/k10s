@@ -1,0 +1,1 @@
+{"context":"prod-eu","message":"nodes is forbidden: User \"dev\" cannot list resource \"nodes\" in API group \"\" at the cluster scope"}
