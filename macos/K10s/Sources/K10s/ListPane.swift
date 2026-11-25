@@ -1,3 +1,4 @@
+import Combine
 import K10sCore
 import SwiftUI
 
@@ -45,6 +46,9 @@ struct ListPane: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Hy.sky)
         .task(id: key) { await run() }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("k10sRetryContext"))) { note in
+            if let c = note.object as? String, tab.scope.contexts.contains(c) { retry += 1 }
+        }
         .task(id: loaded) {
             guard !loaded else { return }
             try? await Task.sleep(nanoseconds: 150_000_000)

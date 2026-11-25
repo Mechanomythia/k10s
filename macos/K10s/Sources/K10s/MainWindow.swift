@@ -12,6 +12,8 @@ struct WindowRoot: View {
         Group {
             if let scope {
                 MainWindow(scope: scope)
+                    .id(scope)
+                    .environment(\.replaceScope, { self.scope = $0 })
             } else if noContexts {
                 NoKubeconfigView()
             } else {
@@ -87,6 +89,7 @@ struct MainWindow: View {
             StatusBar(tab: tab)
         }
         .background(Hy.sky)
+        .modifier(CommandKeys(tab: tab))
         .overlay(alignment: .top) {
             if tab.commandBarOpen { CommandBar(tab: tab) }
         }
@@ -132,5 +135,19 @@ struct ShellCommands: Commands {
                 .keyboardShortcut(KeyEquivalent(Character(String(n))), modifiers: .command)
             }
         }
+    }
+}
+
+// MARK: - Replacing a tab's scope in place (`:ctx` and `:set` without ⌘)
+
+private struct ReplaceScopeKey: EnvironmentKey {
+    static let defaultValue: (TabScope) -> Void = { _ in }
+}
+
+extension EnvironmentValues {
+    /// Replaces this window's scope; the main window is rebuilt for the new contexts.
+    var replaceScope: (TabScope) -> Void {
+        get { self[ReplaceScopeKey.self] }
+        set { self[ReplaceScopeKey.self] = newValue }
     }
 }

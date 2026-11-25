@@ -6,6 +6,7 @@ struct CommandBar: View {
     var tab: TabModel
     @Environment(EngineClient.self) private var engine
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.replaceScope) private var replaceScope
     @State private var text = ""
     @State private var highlight = 0
     @State private var failed = false
@@ -164,8 +165,7 @@ struct CommandBar: View {
         case .kind(let k):
             tab.select(kind: k)
         case .scope(let s):
-            // tab.scope is immutable, so both plain and new-tab open a window for the scope.
-            openWindow(value: s)
+            if newTab { openWindow(value: s) } else { replaceScope(s) }
         case .ns(let n):
             tab.namespace = n
         }
