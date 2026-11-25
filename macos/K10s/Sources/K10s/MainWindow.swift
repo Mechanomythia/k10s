@@ -54,14 +54,43 @@ struct WindowAccessor: NSViewRepresentable {
 
     final class Hook: NSView {
         var title = ""
-        override func viewDidMoveToWindow() { apply() }
+        private var joined = false
+
+        override func viewDidMoveToWindow() {
+            apply()
+            joinTabs()
+        }
+
         func apply() {
             guard let w = window else { return }
             w.tabbingMode = .preferred
-            w.tabbingIdentifier = "k10s.main"
+            w.tabbingIdentifier = WindowAccessor.tabbingID
             w.title = title
         }
+
+        /// SwiftUI shows a new window before this view can set its tabbing mode, so macOS
+        /// opens it as a separate window. Attach it once, explicitly, to the frontmost other
+        /// k10s window's tab group.
+        private func joinTabs() {
+            guard !joined, let w = window else { return }
+            joined = true
+            DispatchQueue.main.async { [weak w] in
+                MainActor.assumeIsolated {
+                    guard let w else { return }
+                    let host = NSApp.orderedWindows.first { other in
+                        other !== w && other.isVisible
+                            && other.tabbingIdentifier == WindowAccessor.tabbingID
+                            && !(other.tabbedWindows?.contains(w) ?? false)
+                    }
+                    guard let host else { return }
+                    host.addTabbedWindow(w, ordered: .above)
+                    w.makeKeyAndOrderFront(nil)
+                }
+            }
+        }
     }
+
+    static let tabbingID = "k10s.main"
 
     func makeNSView(context: Context) -> Hook { Hook() }
     func updateNSView(_ view: Hook, context: Context) {
