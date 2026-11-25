@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>k10s: delete in a protected context</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="k10s.css">
+<link rel="stylesheet" href="ds/hyad/components/bundle.css">
+<script src="ds/hyad/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600&amp;family=Literata:opsz,wght@7..72,300;7..72,400&amp;family=Spline+Sans+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.f{width:560px;height:420px;box-sizing:border-box;padding:20px;background:#05070a;font-family:var(--font-ui);color:var(--starlight)}
+.sheet{background:var(--sky-raised);border:1px solid var(--neatline-strong);border-radius:var(--radius-2);box-shadow:var(--lift);padding:24px;display:flex;flex-direction:column;gap:12px}
+h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:22px;line-height:28px}
+.row{display:flex;align-items:center;gap:8px}
+.t{font-family:var(--font-mono);font-size:12px;color:var(--faint)}
+p{margin:0;color:var(--dust);font-size:13.5px;line-height:21px}
+.lab{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dust)}
+input{height:34px;box-sizing:border-box;width:100%;padding:0 12px;background:var(--sky);border:1px solid var(--neatline-strong);border-radius:var(--radius-1);color:var(--starlight);font-family:var(--font-mono);font-size:13px}
+.acts{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+.code{font-family:var(--font-mono);color:var(--starlight)}
+</style>
+</helmet>
+<div class="f">
+  <div class="sheet" role="dialog" aria-label="Delete deployment in a protected context">
+    <div class="row"><h2 style="flex:1">Delete deployment?</h2><x-import component-from-global-scope="Hyad.Tag">protected</x-import></div>
+    <span class="t">gke_hue-resources-prod_europe-west4_remote-access-eu · payments</span>
+    <p><span class="code">checkout-api</span> and its 4 pods are deleted. Nothing recreates them.</p>
+    <p>This context is protected. Type the deployment’s name to delete it.</p>
+    <label style="display:flex;flex-direction:column;gap:6px"><span class="lab">Name</span><input type="text" value="checkout-ap" aria-label="Type the name to confirm"></label>
+    <div class="acts">
+      <x-import component-from-global-scope="Hyad.Button" variant="quiet">Cancel</x-import>
+      <x-import component-from-global-scope="Hyad.Button" variant="danger" disabled="{{ yes }}">Delete deployment</x-import>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":560,"height":420}}'>
+class Component extends DCLogic { renderVals() { return { yes: true }; } }
+</script>
+</body>
+</html>

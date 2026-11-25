@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>k10s: edit YAML</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="k10s.css">
+<link rel="stylesheet" href="ds/hyad/components/bundle.css">
+<script src="ds/hyad/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600&amp;family=Spline+Sans+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.p{width:720px;height:760px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--sky-raised);border:1px solid var(--neatline);font-family:var(--font-ui);color:var(--starlight)}
+.h{padding:16px 16px 0;display:flex;flex-direction:column;gap:4px}
+.h .n{font-family:var(--font-mono);font-size:14px;font-weight:500}
+.h .s{font-family:var(--font-mono);font-size:11.5px;color:var(--faint)}
+.seg{display:flex;margin-top:12px;border-bottom:1px solid var(--neatline);padding:0 16px}
+.seg span{padding:8px 12px;color:var(--dust);font-size:12.5px}
+.seg span.on{color:var(--starlight);box-shadow:inset 0 -2px 0 var(--starlight)}
+.note{display:flex;gap:10px;align-items:center;margin:12px 16px 0;padding:10px 14px;border:1px solid var(--neatline);background:var(--sky)}
+.note .t{font-weight:600;font-size:13px}
+.note .b{font-size:12.5px;color:var(--dust)}
+.ed{flex:1;margin:12px 16px;background:var(--sky);border:1px solid var(--neatline-strong);border-radius:var(--radius-1);padding:12px 14px;font-family:var(--font-mono);font-size:12px;line-height:19px;white-space:pre;color:var(--starlight);overflow:hidden}
+.ed .k{color:var(--dust)}
+.ed .chg{background:var(--tint-g)}
+.bar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--neatline)}
+.bar .m{font-family:var(--font-mono);font-size:11.5px;color:var(--faint);flex:1}
+</style>
+</helmet>
+<div class="p">
+  <div class="h"><span class="n">checkout-api</span><span class="s">Deployment · payments · gke_hue-resources-dev_europe-west4_remote-access-eu</span></div>
+  <div class="seg"><span>Describe</span><span class="on">YAML · editing</span><span>Events</span></div>
+  <div class="note" role="alert">
+    <x-import component-from-global-scope="Hyad.Star" state="degraded" size="{{ s16 }}" show-label="{{ no }}"></x-import>
+    <div style="display:flex;flex-direction:column;gap:2px;flex:1">
+      <span class="t">checkout-api changed since you opened it.</span>
+      <span class="b">Your edits are kept. Reload to start from the new version, or save over it anyway.</span>
+    </div>
+    <x-import component-from-global-scope="Hyad.Button" variant="secondary" size="s">Reload</x-import>
+  </div>
+<div class="ed" role="textbox" aria-label="YAML"><span class="k">apiVersion:</span> apps/v1
+<span class="k">kind:</span> Deployment
+<span class="k">metadata:</span>
+  <span class="k">name:</span> checkout-api
+  <span class="k">namespace:</span> payments
+<span class="k">spec:</span>
+<span class="chg">  <span class="k">replicas:</span> 4</span>
+  <span class="k">selector:</span>
+    <span class="k">matchLabels:</span>
+      <span class="k">app:</span> checkout-api
+  <span class="k">template:</span>
+    <span class="k">spec:</span>
+      <span class="k">containers:</span>
+      - <span class="k">name:</span> api
+<span class="chg">        <span class="k">image:</span> europe-docker.pkg.dev/acme/checkout-api:4.13.1</span>
+        <span class="k">resources:</span>
+          <span class="k">limits:</span>
+            <span class="k">memory:</span> 512Mi</div>
+  <div class="bar">
+    <span class="m">2 lines changed · status and managedFields are not editable</span>
+    <x-import component-from-global-scope="Hyad.Button" variant="quiet">Discard</x-import>
+    <x-import component-from-global-scope="Hyad.Button" variant="secondary">Save anyway</x-import>
+    <x-import component-from-global-scope="Hyad.Button" variant="primary" disabled="{{ yes }}">Save</x-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":720,"height":760}}'>
+class Component extends DCLogic { renderVals() { return { no: false, yes: true, s16: 16 }; } }
+</script>
+</body>
+</html>

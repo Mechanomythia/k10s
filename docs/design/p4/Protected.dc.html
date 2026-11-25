@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>k10s: protected contexts setting</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="k10s.css">
+<link rel="stylesheet" href="ds/hyad/components/bundle.css">
+<script src="ds/hyad/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600&amp;family=Literata:opsz,wght@7..72,300;7..72,400&amp;family=Spline+Sans+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.w{width:640px;height:560px;box-sizing:border-box;background:var(--sky-raised);border:1px solid var(--neatline);font-family:var(--font-ui);color:var(--starlight);padding:24px;display:flex;flex-direction:column;gap:14px}
+h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:22px;line-height:28px}
+p{margin:0;color:var(--dust);font-size:13.5px;line-height:21px}
+.lab{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dust)}
+input{height:34px;box-sizing:border-box;width:100%;padding:0 12px;background:var(--sky);border:1px solid var(--neatline-strong);border-radius:var(--radius-1);color:var(--starlight);font-family:var(--font-mono);font-size:13px}
+.list{border:1px solid var(--neatline);background:var(--sky)}
+.r{display:grid;grid-template-columns:minmax(0,1fr) 92px 150px;align-items:center;gap:10px;height:34px;padding:0 12px;border-top:1px solid var(--neatline);font-family:var(--font-mono);font-size:12px}
+.r:first-child{border-top:0}
+.r .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.r .why{font-family:var(--font-ui);font-size:11.5px;color:var(--faint)}
+select{height:26px;background:var(--sky-raised);border:1px solid var(--neatline-strong);border-radius:var(--radius-1);color:var(--starlight);font-family:var(--font-ui);font-size:12px;padding:0 6px}
+</style>
+</helmet>
+<div class="w">
+  <h2>Protected contexts</h2>
+  <p>Writes in a protected context ask you to type the object’s name. By default a context is protected when its name contains one of these words. Set any context by hand to override that.</p>
+  <label style="display:flex;flex-direction:column;gap:6px"><span class="lab">Words, comma separated</span><input type="text" value="prod, live" aria-label="Protected words"></label>
+  <span class="lab">6 of 25 contexts protected</span>
+  <div class="list">
+    <div class="r"><span class="n">gke_hue-core-infra-dev_europe-west4_crossplane-dev</span><x-import component-from-global-scope="Hyad.Tag">protected</x-import><select aria-label="crossplane-dev"><option>Protected</option></select></div>
+    <div class="r"><span class="n">gke_hue-core-infra-prod_europe-west4_crossplane-prod</span><x-import component-from-global-scope="Hyad.Tag">protected</x-import><select aria-label="crossplane-prod"><option>Automatic · prod</option></select></div>
+    <div class="r"><span class="n">gke_hue-resources-prod_europe-west4_remote-access-eu</span><x-import component-from-global-scope="Hyad.Tag">protected</x-import><select aria-label="remote-access-eu prod"><option>Automatic · prod</option></select></div>
+    <div class="r"><span class="n">gke_hue-resources-prod_us-east1_remote-access-us</span><x-import component-from-global-scope="Hyad.Tag">protected</x-import><select aria-label="remote-access-us prod"><option>Automatic · prod</option></select></div>
+    <div class="r"><span class="n">gke_meethue-live_europe-west4_thor</span><x-import component-from-global-scope="Hyad.Tag">protected</x-import><select aria-label="thor"><option>Automatic · live</option></select></div>
+    <div class="r"><span class="n">gke_meethue-live_us-east1_oneill</span><x-import component-from-global-scope="Hyad.Tag">protected</x-import><select aria-label="oneill"><option>Automatic · live</option></select></div>
+    <div class="r"><span class="n">gke_w00tcamp-fibonacci_europe-west1_fibonacci</span><span class="why">—</span><select aria-label="fibonacci"><option>Automatic</option></select></div>
+    <div class="r"><span class="n">orbstack</span><span class="why">—</span><select aria-label="orbstack"><option>Not protected</option></select></div>
+  </div>
+  <span class="why" style="font-size:12px;color:var(--faint)">Also: right-click a context in the toolbar → Protect / Stop protecting.</span>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":640,"height":560}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script>
+</body>
+</html>
