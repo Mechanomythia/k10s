@@ -23,6 +23,7 @@ type fakeAPI struct {
 	srv      *httptest.Server
 	cols     []string
 	fail     bool            // 500 for everything
+	status   int             // if set, table lists answer this status as a Status object
 	listGate <-chan struct{} // if set, lists wait for it
 
 	mu   sync.Mutex
@@ -127,6 +128,11 @@ func (f *fakeAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		f.lists.Add(1)
+		if f.status != 0 {
+			w.WriteHeader(f.status)
+			fmt.Fprintf(w, `{"kind":"Status","apiVersion":"v1","status":"Failure","message":"pods is forbidden: nope","code":%d}`, f.status)
+			return
+		}
 		if f.listGate != nil {
 			<-f.listGate
 		}

@@ -23,8 +23,10 @@ struct WindowKeys: NSViewRepresentable {
     static func handle(_ event: NSEvent, in window: NSWindow, tab: TabModel) -> Bool {
         // The command bar and the new-tab sheet handle their own keys.
         if tab.commandBarOpen || tab.newTabOpen { return false }
-        // ⌘, ⌥ and ⌃ combinations belong to the menus.
-        if !event.modifierFlags.intersection([.command, .option, .control]).isEmpty { return false }
+        // ⌘ and ⌥ combinations belong to the menus; ⌃ only for ⌃D (delete).
+        let mods = event.modifierFlags.intersection([.command, .option, .control])
+        let isCtrlD = mods == .control && event.charactersIgnoringModifiers == "d"
+        if !mods.isEmpty && !isCtrlD { return false }
 
         let isEscape = event.keyCode == 53
         let isReturn = event.keyCode == 36 || event.keyCode == 76
@@ -36,6 +38,8 @@ struct WindowKeys: NSViewRepresentable {
             window.makeFirstResponder(nil)
             return true
         }
+
+        if isCtrlD { return tab.request(.delete) }
 
         if isEscape {
             if tab.inspectorOpen { tab.inspectorOpen = false; return true }
@@ -58,7 +62,11 @@ struct WindowKeys: NSViewRepresentable {
         case "k": tab.moveSelection(-1)
         case "d": _ = tab.openInspector(.describe)
         case "y": _ = tab.openInspector(.yaml)
-        case "e": _ = tab.openInspector(.events)
+        case "v": _ = tab.openInspector(.events)
+        case "e": tab.edit()
+        case "s": return tab.request(.scale)
+        case "r": return tab.request(.restart)
+        case "c": tab.copyName()
         case "l": _ = tab.openInspector(.logs)
         default: return false
         }

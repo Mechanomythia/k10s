@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>k10s: scale</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="k10s.css">
+<link rel="stylesheet" href="ds/hyad/components/bundle.css">
+<script src="ds/hyad/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600&amp;family=Literata:opsz,wght@7..72,300;7..72,400&amp;family=Spline+Sans+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.f{width:480px;height:340px;box-sizing:border-box;padding:20px;background:#05070a;font-family:var(--font-ui);color:var(--starlight)}
+.sheet{background:var(--sky-raised);border:1px solid var(--neatline-strong);border-radius:var(--radius-2);box-shadow:var(--lift);padding:24px;display:flex;flex-direction:column;gap:12px}
+h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:22px;line-height:28px}
+.t{font-family:var(--font-mono);font-size:12px;color:var(--faint)}
+.lab{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dust)}
+.stepper{display:flex;align-items:center;gap:8px}
+.stepper input{width:96px;height:34px;box-sizing:border-box;padding:0 12px;background:var(--sky);border:1px solid var(--neatline-strong);border-radius:var(--radius-1);color:var(--starlight);font-family:var(--font-mono);font-size:15px;text-align:right}
+.now{font-family:var(--font-mono);font-size:12px;color:var(--dust)}
+.acts{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+</style>
+</helmet>
+<div class="f">
+  <div class="sheet" role="dialog" aria-label="Scale">
+    <h2>Scale checkout-api</h2>
+    <span class="t">Deployment · payments · gke_hue-resources-dev_europe-west4_remote-access-eu</span>
+    <label style="display:flex;flex-direction:column;gap:6px">
+      <span class="lab">Replicas</span>
+      <span class="stepper"><input type="text" value="5" aria-label="Replicas"><span class="now">now 3 · 3 ready</span></span>
+    </label>
+    <div class="acts">
+      <x-import component-from-global-scope="Hyad.Button" variant="quiet">Cancel</x-import>
+      <x-import component-from-global-scope="Hyad.Button" variant="primary">Scale to 5</x-import>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":480,"height":340}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script>
+</body>
+</html>

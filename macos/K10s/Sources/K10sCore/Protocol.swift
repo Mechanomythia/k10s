@@ -14,6 +14,10 @@ public enum Method {
     public static let objectEvents = "object.events"
     public static let podContainers = "pod.containers"
     public static let logsSubscribe = "logs.subscribe"
+    public static let objectDelete = "object.delete"
+    public static let workloadScale = "workload.scale"
+    public static let workloadRestart = "workload.restart"
+    public static let objectReplace = "object.replace"
     public static let unsubscribe = "unsubscribe"
 }
 
@@ -23,6 +27,7 @@ public enum EventName {
     public static let upsert = "upsert"
     public static let delete = "delete"
     public static let contextState = "context.state"
+    public static let forbidden = "forbidden"
     public static let lines = "lines"
     public static let end = "end"
 }
@@ -32,6 +37,8 @@ public enum ErrorCode {
     public static let unknownMethod = "unknown_method"
     public static let invalidParams = "invalid_params"
     public static let `internal` = "internal"
+    public static let forbidden = "forbidden"
+    public static let conflict = "conflict"
 }
 
 /// Any JSON value: the raw params, result and data of the envelopes.
@@ -227,6 +234,12 @@ public struct PodContainersParams: Codable {
     public let context: String
     public let namespace: String
     public let name: String
+
+    public init(context: String, namespace: String, name: String) {
+        self.context = context
+        self.namespace = namespace
+        self.name = name
+    }
 }
 
 public struct PodContainersResult: Codable {
@@ -239,6 +252,13 @@ public struct ObjectParams: Codable {
     public let resource: ResourceRef
     public var namespace: String?
     public let name: String
+
+    public init(context: String, resource: ResourceRef, namespace: String? = nil, name: String) {
+        self.context = context
+        self.resource = resource
+        self.namespace = namespace
+        self.name = name
+    }
 }
 
 public struct TextResult: Codable {
@@ -249,6 +269,12 @@ public struct ObjectEventsParams: Codable {
     public let context: String
     public var namespace: String?
     public let uid: String
+
+    public init(context: String, namespace: String? = nil, uid: String) {
+        self.context = context
+        self.namespace = namespace
+        self.uid = uid
+    }
 }
 
 public struct ObjectEvent: Codable {
@@ -273,6 +299,20 @@ public struct LogsSubscribeParams: Codable {
     public let tailLines: Int
     public let follow: Bool
     public var timestamps: Bool?
+
+    public init(context: String, namespace: String, pod: String, container: String? = nil,
+                allContainers: Bool? = nil, previous: Bool? = nil, tailLines: Int, follow: Bool,
+                timestamps: Bool? = nil) {
+        self.context = context
+        self.namespace = namespace
+        self.pod = pod
+        self.container = container
+        self.allContainers = allContainers
+        self.previous = previous
+        self.tailLines = tailLines
+        self.follow = follow
+        self.timestamps = timestamps
+    }
 }
 
 public struct Lines: Codable {
@@ -281,4 +321,49 @@ public struct Lines: Codable {
 
 public struct End: Codable {
     public var error: String?
+}
+
+/// Data of a `forbidden` table event: the API server refused (403) to list or
+/// watch the kind in that context. The context stays live.
+public struct Forbidden: Codable {
+    public let context: String
+    public let message: String
+}
+
+/// Params of workload.scale (result `Empty`). object.delete and
+/// workload.restart take `ObjectParams`.
+public struct ScaleParams: Codable {
+    public let context: String
+    public let resource: ResourceRef
+    public var namespace: String?
+    public let name: String
+    public let replicas: Int
+
+    public init(context: String, resource: ResourceRef, namespace: String? = nil, name: String, replicas: Int) {
+        self.context = context
+        self.resource = resource
+        self.namespace = namespace
+        self.name = name
+        self.replicas = replicas
+    }
+}
+
+public struct ReplaceParams: Codable {
+    public let context: String
+    public let resource: ResourceRef
+    public var namespace: String?
+    public let name: String
+    public let yaml: String
+
+    public init(context: String, resource: ResourceRef, namespace: String? = nil, name: String, yaml: String) {
+        self.context = context
+        self.resource = resource
+        self.namespace = namespace
+        self.name = name
+        self.yaml = yaml
+    }
+}
+
+public struct ReplaceResult: Codable {
+    public let resourceVersion: String
 }

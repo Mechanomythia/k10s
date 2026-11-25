@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>k10s: row actions</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="k10s.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600&amp;family=Spline+Sans+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.m{width:360px;height:460px;box-sizing:border-box;padding:16px;background:#05070a;font-family:var(--font-ui)}
+.menu{width:300px;background:var(--sky-high);border:1px solid var(--neatline-strong);border-radius:var(--radius-2);box-shadow:var(--lift);padding:6px 0}
+.hd{padding:6px 14px 8px;font-family:var(--font-mono);font-size:12px;color:var(--dust);border-bottom:1px solid var(--neatline);margin-bottom:4px}
+.it{display:flex;align-items:center;justify-content:space-between;height:30px;padding:0 14px;font-size:13px;color:var(--starlight)}
+.it.on{background:var(--sky-raised)}
+.it .k{font-family:var(--font-mono);font-size:11.5px;color:var(--faint)}
+.it.danger{color:var(--class-m)}
+.sep{height:1px;background:var(--neatline);margin:4px 0}
+.it.off{color:var(--faint)}
+</style>
+</helmet>
+<div class="m">
+  <div class="menu" role="menu" aria-label="Row actions">
+    <div class="hd">checkout-api · Deployment · prod-us</div>
+    <div class="it">Describe<span class="k">d</span></div>
+    <div class="it">YAML<span class="k">y</span></div>
+    <div class="it">Events<span class="k">v</span></div>
+    <div class="sep"></div>
+    <div class="it on">Edit…<span class="k">e</span></div>
+    <div class="it">Scale…<span class="k">s</span></div>
+    <div class="it">Restart<span class="k">r</span></div>
+    <div class="sep"></div>
+    <div class="it off">Open shell (pods)<span class="k">s</span></div>
+    <div class="it off">Port-forward… (pods, services)<span class="k">⇧F</span></div>
+    <div class="sep"></div>
+    <div class="it danger">Delete…<span class="k">⌃D</span></div>
+    <div class="sep"></div>
+    <div class="it">Copy name<span class="k">c</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":360,"height":460}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script>
+</body>
+</html>

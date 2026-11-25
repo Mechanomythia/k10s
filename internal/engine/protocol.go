@@ -11,16 +11,20 @@ import "encoding/json"
 
 // Request methods.
 const (
-	MethodContextsList   = "contexts.list"
-	MethodContextsWatch  = "contexts.watch"
-	MethodResourcesList  = "resources.list"
-	MethodTableSubscribe = "table.subscribe"
-	MethodObjectYAML     = "object.yaml"
-	MethodObjectDescribe = "object.describe"
-	MethodObjectEvents   = "object.events"
-	MethodPodContainers  = "pod.containers"
-	MethodLogsSubscribe  = "logs.subscribe"
-	MethodUnsubscribe    = "unsubscribe"
+	MethodContextsList    = "contexts.list"
+	MethodContextsWatch   = "contexts.watch"
+	MethodResourcesList   = "resources.list"
+	MethodTableSubscribe  = "table.subscribe"
+	MethodObjectYAML      = "object.yaml"
+	MethodObjectDescribe  = "object.describe"
+	MethodObjectEvents    = "object.events"
+	MethodPodContainers   = "pod.containers"
+	MethodLogsSubscribe   = "logs.subscribe"
+	MethodObjectDelete    = "object.delete"
+	MethodWorkloadScale   = "workload.scale"
+	MethodWorkloadRestart = "workload.restart"
+	MethodObjectReplace   = "object.replace"
+	MethodUnsubscribe     = "unsubscribe"
 )
 
 // Event names, carried in Event.Event.
@@ -30,6 +34,7 @@ const (
 	EventUpsert          = "upsert"           // table.subscribe: data is Upsert
 	EventDelete          = "delete"           // table.subscribe: data is Delete
 	EventContextState    = "context.state"    // table.subscribe: data is ContextStateChange
+	EventForbidden       = "forbidden"        // table.subscribe: data is Forbidden
 	EventLines           = "lines"            // logs.subscribe: data is Lines
 	EventEnd             = "end"              // logs.subscribe: data is End
 )
@@ -40,6 +45,8 @@ const (
 	CodeUnknownMethod  = "unknown_method"
 	CodeInvalidParams  = "invalid_params"
 	CodeInternal       = "internal"
+	CodeForbidden      = "forbidden" // the API server answered 403
+	CodeConflict       = "conflict"  // the API server answered 409
 )
 
 // Request is a call from the app. It gets exactly one Response with the same ID.
@@ -286,4 +293,37 @@ type Lines struct {
 // it ended because of a failure.
 type End struct {
 	Error string `json:"error,omitempty"`
+}
+
+// Forbidden is the data of a forbidden event: the API server refused (403) to
+// list or watch the kind for this subscription's context. The context stays
+// live; the other contexts of the subscription are unaffected.
+type Forbidden struct {
+	Context string `json:"context"`
+	Message string `json:"message"`
+}
+
+// ScaleParams are the params of workload.scale (result Empty): Deployment,
+// StatefulSet or ReplicaSet.
+type ScaleParams struct {
+	Context   string      `json:"context"`
+	Resource  ResourceRef `json:"resource"`
+	Namespace string      `json:"namespace,omitempty"`
+	Name      string      `json:"name"`
+	Replicas  int         `json:"replicas"`
+}
+
+// ReplaceParams are the params of object.replace. The YAML's resourceVersion
+// is sent as is: the server answers conflict when the object has changed.
+type ReplaceParams struct {
+	Context   string      `json:"context"`
+	Resource  ResourceRef `json:"resource"`
+	Namespace string      `json:"namespace,omitempty"`
+	Name      string      `json:"name"`
+	YAML      string      `json:"yaml"`
+}
+
+// ReplaceResult is the result of object.replace.
+type ReplaceResult struct {
+	ResourceVersion string `json:"resourceVersion"`
 }

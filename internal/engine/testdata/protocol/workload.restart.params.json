@@ -1,0 +1,1 @@
+{"context":"prod-eu","resource":{"group":"apps","version":"v1","plural":"deployments"},"namespace":"default","name":"web"}

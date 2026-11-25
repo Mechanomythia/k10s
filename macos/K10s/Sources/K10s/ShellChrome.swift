@@ -17,6 +17,7 @@ struct Kbd: View {
 /// 52 px: contexts with stars, namespace, filter, ":" hint.
 struct ToolbarView: View {
     @Bindable var tab: TabModel
+    @Environment(Protection.self) private var protection
     @FocusState private var filterFocused: Bool
 
     private var multi: Bool { tab.scope.contexts.count > 1 }
@@ -32,6 +33,16 @@ struct ToolbarView: View {
                                 StarGlyph(state: s, size: 12)
                             }
                             Text(name).font(Hy.mono(13)).foregroundStyle(Hy.starlight).lineLimit(1)
+                            if protection.isProtected(name) { HyTag(text: "protected") }
+                        }
+                        .contextMenu {
+                            if !protection.isProtected(name) {
+                                Button("Protect") { protection.setOverride(name, .protected) }
+                            }
+                            if protection.isProtected(name) {
+                                Button("Stop protecting") { protection.setOverride(name, .notProtected) }
+                            }
+                            Button("Use automatic") { protection.setOverride(name, nil) }
                         }
                     }
                     if multi {
@@ -126,6 +137,7 @@ struct KindsSidebar: View {
 /// 28 px: key hints left, scope facts right.
 struct StatusBar: View {
     var tab: TabModel
+    @Environment(Protection.self) private var protection
 
     private let hints = [("d", "describe"), ("y", "yaml"), ("l", "logs"), ("/", "filter"), (":", "command"), ("esc", "back")]
 
@@ -135,10 +147,12 @@ struct StatusBar: View {
             var parts = [name]
             if let c = tab.contexts.first(where: { $0.name == name }) { parts.append(c.cluster) }
             if let v = tab.health.statuses[name]?.version { parts.append(v) }
-            parts.append("read-only")
+            if protection.isProtected(name) { parts.append("protected") }
             return parts.joined(separator: " · ")
         }
-        return "\(tab.scope.displayName) · \(names.joined(separator: ", ")) · read-only"
+        var text = "\(tab.scope.displayName) · \(names.joined(separator: ", "))"
+        if names.contains(where: protection.isProtected) { text += " · protected" }
+        return text
     }
 
     var body: some View {

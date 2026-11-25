@@ -37,6 +37,12 @@ final class ProtocolTests: XCTestCase {
         "table.subscribe.all.params.json": codec(TableSubscribeParams.self),
         "table.subscribe.params.json": codec(TableSubscribeParams.self),
         "table.upsert.event.json": codec(Upsert.self),
+        "object.delete.params.json": codec(ObjectParams.self),
+        "object.replace.params.json": codec(ReplaceParams.self),
+        "object.replace.result.json": codec(ReplaceResult.self),
+        "table.forbidden.event.json": codec(Forbidden.self),
+        "workload.restart.params.json": codec(ObjectParams.self),
+        "workload.scale.params.json": codec(ScaleParams.self),
         "unsubscribe.params.json": codec(UnsubscribeParams.self),
     ]
 

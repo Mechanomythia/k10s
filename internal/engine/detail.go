@@ -33,10 +33,14 @@ type Detail struct {
 
 // Register wires the four methods into s.
 func (d *Detail) Register(s *Server) {
-	s.Handlers[MethodObjectYAML] = d.yaml
-	s.Handlers[MethodObjectDescribe] = d.describe
-	s.Handlers[MethodObjectEvents] = d.events
-	s.Handlers[MethodPodContainers] = d.podContainers
+	s.Handlers[MethodObjectYAML] = mapAPIErrors(d.yaml)
+	s.Handlers[MethodObjectDescribe] = mapAPIErrors(d.describe)
+	s.Handlers[MethodObjectEvents] = mapAPIErrors(d.events)
+	s.Handlers[MethodPodContainers] = mapAPIErrors(d.podContainers)
+	s.Handlers[MethodObjectDelete] = mapAPIErrors(d.delete)
+	s.Handlers[MethodWorkloadScale] = mapAPIErrors(d.scale)
+	s.Handlers[MethodWorkloadRestart] = mapAPIErrors(d.restart)
+	s.Handlers[MethodObjectReplace] = mapAPIErrors(d.replace)
 	s.Subs[MethodLogsSubscribe] = d.logs
 }
 

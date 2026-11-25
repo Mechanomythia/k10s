@@ -10,6 +10,8 @@ struct ListPane: View {
     @State private var loaded = false
     @State private var showLoading = false
     @State private var retry = 0
+    /// context -> message, from `forbidden` events for the current subscription.
+    @State private var forbidden: [String: String] = [:]
     @FocusState private var focused: Bool
 
     private struct SubKey: Hashable {
@@ -68,6 +70,7 @@ struct ListPane: View {
         tab.table = t
         loaded = false
         showLoading = false
+        forbidden = [:]
         var params = TableSubscribeParams(contexts: tab.scope.contexts, resource: kind.ref,
                                           labelSelector: tab.table.labelSelector)
         if kind.namespaced {
@@ -84,6 +87,8 @@ struct ListPane: View {
                     if let d = try? event.decode(Delete.self) { tab.table.apply(d) }
                 case EventName.contextState:
                     if let c = try? event.decode(ContextStateChange.self) { tab.apply(c) }
+                case EventName.forbidden:
+                    if let f = try? event.decode(Forbidden.self) { forbidden[f.context] = f.message; loaded = true }
                 default:
                     break
                 }
@@ -101,11 +106,14 @@ struct ListPane: View {
             if tab.scope.contexts.count > 1 {
                 ForEach(failing, id: \.self) { notice($0) }
             }
+            ForEach(forbidden.keys.sorted(), id: \.self) { forbiddenNotice(kind: kind, context: $0) }
             if !loaded {
                 if showLoading {
                     Text("Loading…").font(Hy.mono(12)).foregroundStyle(Hy.faint)
                         .padding(.horizontal, Hy.s5).padding(.top, Hy.s2)
                 }
+                Spacer(minLength: 0)
+            } else if total == 0 && tab.table.filter.isEmpty && !forbidden.isEmpty {
                 Spacer(minLength: 0)
             } else if total == 0 && tab.table.filter.isEmpty {
                 EmptyKindView(kind: kind, namespace: kind.namespaced ? tab.namespace : nil)
@@ -151,6 +159,19 @@ struct ListPane: View {
             Spacer(minLength: Hy.s3)
             Button("Retry now") { retry += 1 }.buttonStyle(HyButton(kind: .secondary, small: true))
         }
+        .padding(.vertical, Hy.s3).padding(.horizontal, Hy.s4)
+        .background(Hy.skyRaised)
+        .overlay(Rectangle().strokeBorder(Hy.neatline, lineWidth: 1))
+        .padding(.horizontal, Hy.s5).padding(.bottom, Hy.s3)
+    }
+
+    private func forbiddenNotice(kind: KindEntry, context: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("You may not list \(kind.plural) in \(context).")
+                .font(Hy.ui(13, 700)).foregroundStyle(Hy.starlight)
+            Text(forbidden[context] ?? "").font(Hy.mono(12)).foregroundStyle(Hy.faint)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, Hy.s3).padding(.horizontal, Hy.s4)
         .background(Hy.skyRaised)
         .overlay(Rectangle().strokeBorder(Hy.neatline, lineWidth: 1))
@@ -274,6 +295,9 @@ struct ListPane: View {
         .contentShape(Rectangle())
         .onTapGesture(count: 2) { open(row) }
         .onTapGesture { tab.selection = row; focused = true }
+        .contextMenu {
+            RowActionItems(tab: tab, row: row)
+        }
     }
 
     private func open(_ row: Row) {
