@@ -30,17 +30,39 @@ type Conn struct {
 // Get does, on first use.
 type Conns struct {
 	kube *Kubeconfig
-	// OnState, if set before first use, is called on every state transition
-	// (connecting, then live, unreachable or unauthorized with the error).
-	OnState func(ContextStateChange)
 
 	mu    sync.Mutex
 	conns map[string]*Conn
+
+	lmu       sync.Mutex // guards listeners, nextL and last; held while calling listeners
+	listeners map[int]func(ContextStateChange)
+	nextL     int
+	last      map[string]ContextStateChange
 }
 
 // NewConns returns Conns over the given kubeconfig.
 func NewConns(kube *Kubeconfig) *Conns {
-	return &Conns{kube: kube, conns: map[string]*Conn{}}
+	return &Conns{kube: kube, conns: map[string]*Conn{}, listeners: map[int]func(ContextStateChange){}, last: map[string]ContextStateChange{}}
+}
+
+// Listen calls fn with the last state of every context seen so far, then
+// with every state transition (connecting, then live, unreachable or
+// unauthorized with the error) until stop returns. fn runs under a lock: it
+// must not block or call back into Conns.
+func (c *Conns) Listen(fn func(ContextStateChange)) (stop func()) {
+	c.lmu.Lock()
+	defer c.lmu.Unlock()
+	for _, st := range c.last {
+		fn(st)
+	}
+	id := c.nextL
+	c.nextL++
+	c.listeners[id] = fn
+	return func() {
+		c.lmu.Lock()
+		delete(c.listeners, id)
+		c.lmu.Unlock()
+	}
 }
 
 // Reset drops every cached connection; the next Get reconnects. Call it when
@@ -59,15 +81,16 @@ func (c *Conns) Get(ctx context.Context, name string) (*Conn, error) {
 	cn := c.conns[name]
 	if cn == nil {
 		cfg, err := c.kube.RestConfig(name)
-		if err != nil {
-			c.mu.Unlock()
-			return nil, fmt.Errorf("context %q: %s", name, redact(err.Error()))
+		var dc *discovery.DiscoveryClient
+		if err == nil {
+			cfg.Timeout = 15 * time.Second
+			dc, err = discovery.NewDiscoveryClientForConfig(cfg)
 		}
-		cfg.Timeout = 15 * time.Second
-		dc, err := discovery.NewDiscoveryClientForConfig(cfg)
 		if err != nil {
 			c.mu.Unlock()
-			return nil, fmt.Errorf("context %q: %s", name, redact(err.Error()))
+			msg := fmt.Sprintf("context %q: %s", name, redact(err.Error()))
+			c.state(name, StateUnreachable, msg)
+			return nil, errors.New(msg)
 		}
 		cn = &Conn{Name: name, Config: cfg, Discovery: memory.NewMemCacheClient(dc)}
 		c.conns[name] = cn
@@ -92,9 +115,18 @@ func (c *Conns) Get(ctx context.Context, name string) (*Conn, error) {
 	return cn, nil
 }
 
+// state broadcasts a transition to the listeners, unless it repeats the
+// context's last state.
 func (c *Conns) state(name string, st ContextState, msg string) {
-	if c.OnState != nil {
-		c.OnState(ContextStateChange{Context: name, State: st, Error: msg})
+	ch := ContextStateChange{Context: name, State: st, Error: msg}
+	c.lmu.Lock()
+	defer c.lmu.Unlock()
+	if c.last[name] == ch {
+		return
+	}
+	c.last[name] = ch
+	for _, fn := range c.listeners {
+		fn(ch)
 	}
 }
 

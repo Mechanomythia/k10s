@@ -168,7 +168,8 @@ type Row struct {
 
 // Column is one table column as printed by the API server.
 type Column struct {
-	Name string `json:"name"`
+	Name     string `json:"name"`
+	Priority int    `json:"priority,omitempty"` // above 0: shown only in the wide view, as kubectl does
 }
 
 // Snapshot is the data of a snapshot event: the full table, sent first and

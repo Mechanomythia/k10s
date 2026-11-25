@@ -190,6 +190,8 @@ public struct Row: Codable {
 
 public struct Column: Codable {
     public let name: String
+    /// 0 is always shown; higher only in a wide view (kubectl's -o wide).
+    public let priority: Int?
 }
 
 public struct Snapshot: Codable {
