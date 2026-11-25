@@ -28,14 +28,45 @@ func NewKubeconfig() *Kubeconfig {
 	} else {
 		paths = []string{filepath.Join(home, ".kube", "config")}
 	}
-	irisDir := filepath.Join(home, ".local", "share", "iris", "claude") + string(filepath.Separator)
+	irisDir := resolvePath(filepath.Join(home, ".local", "share", "iris", "claude")) + string(filepath.Separator)
 	k := &Kubeconfig{}
 	for _, p := range paths {
-		if p = filepath.Clean(p); p != "." && !strings.HasPrefix(p, irisDir) {
+		if p == "" {
+			continue
+		}
+		if p = resolvePath(p); !strings.HasPrefix(p, irisDir) {
 			k.paths = append(k.paths, p)
 		}
 	}
 	return k
+}
+
+// resolvePath makes p absolute and follows symlinks, so neither a relative
+// path nor a link can dodge the iris filter. A path that does not exist yet
+// resolves through its nearest existing parent.
+func resolvePath(p string) string { return resolveDepth(p, 0) }
+
+func resolveDepth(p string, depth int) string {
+	p, err := filepath.Abs(p)
+	if err != nil {
+		return filepath.Clean(p)
+	}
+	rest := ""
+	for d := p; ; d = filepath.Dir(d) {
+		if r, err := filepath.EvalSymlinks(d); err == nil {
+			return filepath.Join(r, rest)
+		}
+		if t, err := os.Readlink(d); err == nil && depth < 16 { // dangling link
+			if !filepath.IsAbs(t) {
+				t = filepath.Join(filepath.Dir(d), t)
+			}
+			return filepath.Join(resolveDepth(t, depth+1), rest)
+		}
+		if filepath.Dir(d) == d {
+			return p
+		}
+		rest = filepath.Join(filepath.Base(d), rest)
+	}
 }
 
 func (k *Kubeconfig) rules() *clientcmd.ClientConfigLoadingRules {
