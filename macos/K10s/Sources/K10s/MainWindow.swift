@@ -104,6 +104,7 @@ struct MainWindow: View {
             if tab.commandBarOpen { CommandBar(tab: tab) }
         }
         .sheet(isPresented: $tab.newTabOpen) { NewTabSheet(tab: tab) }
+        .sheet(item: $tab.pendingAction) { PendingActionSheet(pending: $0) }
         .focusedSceneValue(\.tabModel, tab)
         .task(id: engine.restarts) { await tab.load(engine) }
         .task(id: engine.restarts) { await tab.watchNamespaces(engine) }
@@ -129,6 +130,9 @@ struct ShellCommands: Commands {
             Button("New Tab") { tab?.newTabOpen = true }
                 .keyboardShortcut("t", modifiers: .command)
                 .disabled(tab == nil)
+        }
+        CommandMenu("Actions") {
+            if let tab { RowActionItems(tab: tab) } else { Text("No tab") }
         }
         CommandGroup(after: .sidebar) {
             Button(tab?.sidebarVisible == false ? "Show Kinds" : "Hide Kinds") { tab?.sidebarVisible.toggle() }
