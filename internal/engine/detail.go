@@ -36,6 +36,7 @@ func (d *Detail) Register(s *Server) {
 	s.Handlers[MethodObjectYAML] = mapAPIErrors(d.yaml)
 	s.Handlers[MethodObjectDescribe] = mapAPIErrors(d.describe)
 	s.Handlers[MethodObjectEvents] = mapAPIErrors(d.events)
+	s.Handlers[MethodObjectChildren] = mapAPIErrors(d.children)
 	s.Handlers[MethodPodContainers] = mapAPIErrors(d.podContainers)
 	s.Handlers[MethodObjectDelete] = mapAPIErrors(d.delete)
 	s.Handlers[MethodWorkloadScale] = mapAPIErrors(d.scale)

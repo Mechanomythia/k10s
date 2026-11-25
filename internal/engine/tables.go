@@ -58,6 +58,8 @@ type watchKey struct {
 	resource  ResourceRef
 	namespace string // "" for every namespace or a cluster-scoped kind
 	selector  string
+	field     string // field selector
+	owner     string // owner uid
 }
 
 func (t *Tables) subscribe(ctx context.Context, params json.RawMessage) (func(Emit), error) {
@@ -74,7 +76,7 @@ func (t *Tables) subscribe(ctx context.Context, params json.RawMessage) (func(Em
 		stop := t.conns.Listen(s.state)
 		var ws []*sharedWatch
 		for _, name := range p.Contexts {
-			w := t.acquire(watchKey{name, p.Resource, ns, p.LabelSelector})
+			w := t.acquire(watchKey{name, p.Resource, ns, p.LabelSelector, p.FieldSelector, p.OwnerUID})
 			w.join(s)
 			ws = append(ws, w)
 		}
@@ -246,8 +248,9 @@ func (w *sharedWatch) list(ctx context.Context) error {
 	}
 	rows := map[string]Row{}
 	for _, r := range tbl.Rows {
-		row, _ := w.row(r)
-		rows[row.UID] = row
+		if row, _, ok := w.row(r); ok {
+			rows[row.UID] = row
+		}
 	}
 	w.rv = tbl.ResourceVersion
 	w.conns.state(w.key.context, StateLive, "", "")
@@ -292,18 +295,21 @@ func (w *sharedWatch) watch(ctx context.Context, backoff *time.Duration) error {
 		*backoff = minBackoff
 		w.mu.Lock()
 		for _, r := range tbl.Rows {
-			row, rv := w.row(r)
+			row, rv, owned := w.row(r)
 			w.rv = rv
-			switch ev.Type {
-			case "ADDED", "MODIFIED":
-				w.rows[row.UID] = row
-				for s := range w.subs {
-					s.upsert(w.key.context, w.columns, row)
-				}
-			case "DELETED":
+			_, present := w.rows[row.UID]
+			deleted := ev.Type == "DELETED"
+			switch {
+			case deleted && (owned || present) || !deleted && !owned && present:
+				// A row that lost its owner is gone like a deleted one.
 				delete(w.rows, row.UID)
 				for s := range w.subs {
 					s.remove(row)
+				}
+			case owned && !deleted:
+				w.rows[row.UID] = row
+				for s := range w.subs {
+					s.upsert(w.key.context, w.columns, row)
 				}
 			}
 		}
@@ -316,6 +322,9 @@ func (w *sharedWatch) open(ctx context.Context, q url.Values) (io.ReadCloser, er
 	q.Set("includeObject", "Object")
 	if w.key.selector != "" {
 		q.Set("labelSelector", w.key.selector)
+	}
+	if w.key.field != "" {
+		q.Set("fieldSelector", w.key.field)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, w.base+"?"+q.Encode(), nil)
 	if err != nil {
@@ -361,8 +370,9 @@ func (w *sharedWatch) path() string {
 }
 
 // row turns a Table row, whose object is the full object, into a Row and
-// the object's resource version.
-func (w *sharedWatch) row(r metav1.TableRow) (Row, string) {
+// the object's resource version; owned is false for a row the watch's owner
+// uid filters out.
+func (w *sharedWatch) row(r metav1.TableRow) (row Row, rv string, owned bool) {
 	obj := &unstructured.Unstructured{}
 	_ = json.Unmarshal(r.Object.Raw, &obj.Object)
 	cells := make([]string, len(r.Cells))
@@ -371,6 +381,10 @@ func (w *sharedWatch) row(r metav1.TableRow) (Row, string) {
 			cells[i] = fmt.Sprint(c)
 		}
 	}
+	owned = w.key.owner == ""
+	for _, o := range obj.GetOwnerReferences() {
+		owned = owned || string(o.UID) == w.key.owner
+	}
 	return Row{
 		Context:   w.key.context,
 		Namespace: obj.GetNamespace(),
@@ -378,7 +392,7 @@ func (w *sharedWatch) row(r metav1.TableRow) (Row, string) {
 		UID:       string(obj.GetUID()),
 		Cells:     cells,
 		Health:    HealthOf(obj, time.Now()),
-	}, obj.GetResourceVersion()
+	}, obj.GetResourceVersion(), owned
 }
 
 // tableSub is one table.subscribe: it merges the rows of its contexts'
