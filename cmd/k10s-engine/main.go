@@ -29,6 +29,7 @@ func main() {
 	}
 	s := engine.New()
 	kube.Register(s)
+	(&engine.Detail{Conns: conns}).Register(s)
 	if err := s.Serve(ctx, os.Stdin, os.Stdout); err != nil {
 		log.Fatalf("k10s-engine: %v", err)
 	}
