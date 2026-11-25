@@ -1,16 +1,16 @@
-# k10s playbook (draft)
+# k10s playbook
 
-Draft from onboarding (proposal #1). The repository is empty: commands below follow the iris layout and become real once the foundation proposal lands. Anything marked (pending q1) depends on the Kubernetes client decision.
+From onboarding (ADR 0001). Commands below follow the iris layout and become real once the engine proposal (#2) lands.
 
 ## What k10s is
 
 A native macOS app version of k9s: every kubectl-level operation in a SwiftUI interface, with multi-context (read several kube contexts at once, switch between them easily).
 
-## Layout (pending q1)
+## Layout
 
 - `cmd/`, `internal/`: Go engine on client-go (kubeconfig, discovery, watches, logs, exec, port-forward).
 - `macos/K10s/`: SwiftUI app (Swift Package, like `iris/macos/Iris`). Minimum macOS 14.
-- `docs/adr/`: decision records (werkbank commits approved proposals here).
+- `docs/adr/`: decision records, numbered `NNNN-slug.md`. ADR 0001 holds the product brief and the founding decisions.
 
 ## Install, test, build
 
@@ -39,4 +39,5 @@ A native macOS app version of k9s: every kubectl-level operation in a SwiftUI in
 - Never push to main; work on a branch and open a pull request.
 - Never read, copy or log kubeconfig contents, tokens or exec-plugin output beyond what the engine needs in memory. No credentials in logs, crash reports or test fixtures.
 - Never run writes against a real cluster from a session.
+- Never read kubeconfig from `~/.local/share/iris/claude/`: that is iris's Claude-only config; k10s uses your own (ADR 0001, decision 5).
 - No telemetry or network calls other than to the user's clusters and the Sparkle feed.
