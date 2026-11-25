@@ -140,13 +140,13 @@ public final class EngineClient {
     private func readLines(_ handle: FileHandle,
                            onEnd: @escaping @MainActor () -> Void = {},
                            onLine: @escaping @MainActor (String) -> Void) {
-        var buffer = Data()
+        let buffer = LineBuffer()
         handle.readabilityHandler = { fh in
             let chunk = fh.availableData
             if chunk.isEmpty { // EOF
                 fh.readabilityHandler = nil
-                let rest = buffer.isEmpty ? nil : String(decoding: buffer, as: UTF8.self)
-                buffer.removeAll()
+                let rest = buffer.data.isEmpty ? nil : String(decoding: buffer.data, as: UTF8.self)
+                buffer.data.removeAll()
                 DispatchQueue.main.async {
                     MainActor.assumeIsolated {
                         if let rest { onLine(rest) }
@@ -155,11 +155,11 @@ public final class EngineClient {
                 }
                 return
             }
-            buffer.append(chunk)
+            buffer.data.append(chunk)
             var lines: [String] = []
-            while let nl = buffer.firstIndex(of: 0x0A) {
-                lines.append(String(decoding: buffer[buffer.startIndex..<nl], as: UTF8.self))
-                buffer.removeSubrange(buffer.startIndex...nl)
+            while let nl = buffer.data.firstIndex(of: 0x0A) {
+                lines.append(String(decoding: buffer.data[buffer.data.startIndex..<nl], as: UTF8.self))
+                buffer.data.removeSubrange(buffer.data.startIndex...nl)
             }
             guard !lines.isEmpty else { return }
             DispatchQueue.main.async {
@@ -209,4 +209,10 @@ public final class EngineClient {
             log.error("Unreadable line from the engine.")
         }
     }
+}
+
+/// Bytes read from a pipe that do not end in a newline yet. Only touched from the
+/// FileHandle's own serial readability queue.
+private final class LineBuffer: @unchecked Sendable {
+    var data = Data()
 }
