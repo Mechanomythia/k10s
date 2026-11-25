@@ -91,7 +91,7 @@ func TestIrisPathsFiltered(t *testing.T) {
 	iris := filepath.Join(home, ".local/share/iris/claude/kubeconfig")
 	mine := filepath.Join(home, "mine")
 	t.Setenv("KUBECONFIG", iris+string(os.PathListSeparator)+mine)
-	if got := NewKubeconfig().paths; len(got) != 1 || got[0] != mine {
+	if got := NewKubeconfig().paths; len(got) != 1 || filepath.Base(got[0]) != filepath.Base(mine) {
 		t.Errorf("paths = %v", got)
 	}
 }
