@@ -12,13 +12,13 @@ struct InspectorPane: View {
     @State private var error: String?
     @State private var loaded = false
 
-    private var isPod: Bool { tab.kind?.kind == "Pod" && tab.kind?.group.isEmpty == true }
+    private var isPod: Bool { tab.activeKind?.kind == "Pod" && tab.activeKind?.group.isEmpty == true }
     private var current: InspectorTab { (tab.inspectorTab == .logs && !isPod) ? .describe : tab.inspectorTab }
     private var tabs: [InspectorTab] { isPod ? InspectorTab.allCases : [.describe, .yaml, .events] }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let row = tab.selection {
+            if let row = tab.activeSelection {
                 header(row)
                 content(row)
             } else {
@@ -47,7 +47,7 @@ struct InspectorPane: View {
     private func header(_ row: Row) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(row.name).font(Hy.mono(14, 500)).foregroundStyle(Hy.starlight).lineLimit(1).truncationMode(.middle)
-            Text([tab.kind?.kind, row.namespace, row.context].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
+            Text([tab.activeKind?.kind, row.namespace, row.context].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
                 .font(Hy.mono(11.5)).foregroundStyle(Hy.faint).lineLimit(1).padding(.top, 2)
             HStack(spacing: Hy.s4) {
                 ForEach(tabs, id: \.self) { t in
@@ -73,7 +73,7 @@ struct InspectorPane: View {
     @ViewBuilder private func content(_ row: Row) -> some View {
         switch current {
         case .logs:
-            LogsView(row: row)
+            LogsView(row: row, tab: tab)
         case .events:
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -123,7 +123,7 @@ struct InspectorPane: View {
     // MARK: loading
 
     private func params(_ row: Row) -> InspectorObjectParams {
-        InspectorObjectParams(context: row.context, resource: tab.kind?.ref ?? ResourceRef(version: "v1", plural: "pods"),
+        InspectorObjectParams(context: row.context, resource: tab.activeKind?.ref ?? ResourceRef(version: "v1", plural: "pods"),
                               namespace: row.namespace, name: row.name)
     }
 

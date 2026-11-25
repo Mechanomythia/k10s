@@ -116,7 +116,7 @@ struct MainWindow: View {
                     KindsSidebar(tab: tab)
                     Rectangle().fill(Hy.neatline).frame(width: 1)
                 }
-                ListPane(tab: tab)
+                LevelsView(tab: tab)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 if tab.inspectorOpen {
                     Rectangle().fill(Hy.neatline).frame(width: 1)
@@ -135,7 +135,8 @@ struct MainWindow: View {
         .sheet(isPresented: $tab.newTabOpen) { NewTabSheet(tab: tab) }
         .sheet(item: $tab.pendingAction) { PendingActionSheet(pending: $0) }
         .focusedSceneValue(\.tabModel, tab)
-        .task(id: engine.restarts) { await tab.load(engine) }
+        .onChange(of: tab.namespace) { tab.clearStack() }
+        .task(id: engine.restarts) { tab.engine = engine; await tab.load(engine) }
         .task(id: engine.restarts) { await tab.watchNamespaces(engine) }
     }
 }
