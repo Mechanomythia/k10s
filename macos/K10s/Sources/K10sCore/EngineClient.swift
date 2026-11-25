@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import os
 
-private let log = Logger(subsystem: "app.k10s", category: "engine")
+private let log = Logger(subsystem: "com.mechanomythia.k10s", category: "engine")
 
 /// One event of a subscription: its name and the raw JSON of its data.
 public struct EngineEvent {
@@ -128,7 +128,7 @@ public final class EngineClient {
         stdin = inPipe.fileHandleForWriting
         Task {
             do {
-                for try await line in errPipe.fileHandleForReading.bytes.lines { log.info("\(line)") }
+                for try await line in errPipe.fileHandleForReading.bytes.lines { log.info("\(line, privacy: .private)") }
             } catch {}
         }
         Task {
