@@ -166,21 +166,26 @@ struct ListPane: View {
         }
     }
 
+    private static func stretched(_ w: [CGFloat], at i: Int, to total: CGFloat) -> [CGFloat] {
+        guard i < w.count else { return w }
+        var out = w
+        out[i] = max(w[i], total - (w.reduce(0, +) - w[i]))
+        return out
+    }
+
     private var grid: some View {
         let columns = tab.table.columns
         let rows = tab.table.rows
-        var w = widths(columns: columns, rows: rows)
+        let base = widths(columns: columns, rows: rows)
         let nameIdx = columns.firstIndex(of: "Name") ?? 0
         return GeometryReader { geo in
-            let others = w.enumerated().filter { $0.offset != nameIdx }.reduce(0) { $0 + $1.element }
-            let avail = geo.size.width - 2 * Hy.s5 - Self.gutter - others
-            let _ = { if nameIdx < w.count { w[nameIdx] = max(w[nameIdx], avail) } }()
+            let w = Self.stretched(base, at: nameIdx, to: geo.size.width - 2 * Hy.s5 - Self.gutter)
             ScrollView(.horizontal) {
                 VStack(alignment: .leading, spacing: 0) {
                     headerRow(columns: columns, widths: w)
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(rows, id: \.uid) { row in
+                            ForEach(rows, id: \.rowKey) { row in
                                 dataRow(row, widths: w, rows: rows)
                             }
                         }
@@ -282,4 +287,8 @@ struct ListPane: View {
         tab.selection = rows[next]
         return .handled
     }
+}
+
+private extension Row {
+    var rowKey: String { context + "\u{0}" + uid }
 }
