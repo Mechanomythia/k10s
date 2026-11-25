@@ -34,7 +34,8 @@ A native macOS app version of k9s: every kubectl-level operation in a SwiftUI in
 
 - Developer ID signing, notarization and Sparkle updates from GitHub releases, copied from iris (`build-app.sh`, `.github/workflows/build.yml`, `docs/notarization.md`). Not the App Store: its sandbox blocks kubeconfig and exec auth plugins.
 - Secrets (names only, values in GitHub Actions secrets): MACOS_CERTIFICATE_P12, MACOS_CERTIFICATE_PASSWORD, NOTARY_KEY_P8, NOTARY_KEY_ID, NOTARY_ISSUER_ID, SPARKLE_ED_PRIVATE_KEY. The owner adds them; agents never handle their values.
-- Releases are cut by the owner (workflow_dispatch with a version). Agents never tag or publish.
+- Releases are cut by the owner, or by an agent when the owner asks (workflow_dispatch on main with `release_version`). Agents never tag or publish otherwise.
+- After each release X.Y.Z, bump the dev prefix in `.github/workflows/build.yml` (`format('X.Y.(Z+1)-dev.{0}', …)`) and `VERSION` in the Makefile. Sparkle ranks `X.Y.Z-dev.N` below `X.Y.Z`, so a dev build with a stale prefix offers the older release as an update.
 
 ## Never
 

@@ -38,7 +38,7 @@ jobs:
       HAS_SIGNING: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
       HAS_NOTARY: ${{ secrets.NOTARY_KEY_P8 != '' }}
       HAS_SPARKLE: ${{ secrets.SPARKLE_ED_PRIVATE_KEY != '' }}
-      VERSION: ${{ (github.event_name == 'workflow_dispatch' && inputs.release_version != '') && inputs.release_version || format('0.1.0-dev.{0}', github.run_number) }}
+      VERSION: ${{ (github.event_name == 'workflow_dispatch' && inputs.release_version != '') && inputs.release_version || format('0.1.1-dev.{0}', github.run_number) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
