@@ -7,6 +7,7 @@ struct WindowRoot: View {
     @Binding var scope: TabScope?
     @Environment(EngineClient.self) private var engine
     @State private var noContexts = false
+    @State private var loadError: String?
 
     var body: some View {
         Group {
@@ -14,6 +15,8 @@ struct WindowRoot: View {
                 MainWindow(scope: scope)
                     .id(scope)
                     .environment(\.replaceScope, { self.scope = $0 })
+            } else if let message = engine.errorMessage ?? loadError {
+                EngineErrorView(message: message)
             } else if noContexts {
                 NoKubeconfigView()
             } else {
@@ -27,8 +30,15 @@ struct WindowRoot: View {
         .background(WindowAccessor(title: scope?.displayName ?? "k10s"))
         .task(id: engine.restarts) {
             guard scope == nil else { return }
-            let r: ContextsListResult? = try? await engine.request(Method.contextsList, Empty())
-            let list = r?.contexts ?? []
+            loadError = nil
+            let list: [ContextInfo]
+            do {
+                let r: ContextsListResult = try await engine.request(Method.contextsList, Empty())
+                list = r.contexts
+            } catch {
+                loadError = error.localizedDescription
+                return
+            }
             if let c = list.first(where: { $0.current }) ?? list.first {
                 scope = TabScope(contexts: [c.name])
             } else {
@@ -149,5 +159,31 @@ extension EnvironmentValues {
     var replaceScope: (TabScope) -> Void {
         get { self[ReplaceScopeKey.self] }
         set { self[ReplaceScopeKey.self] = newValue }
+    }
+}
+
+/// The engine could not be reached or did not answer: say so instead of pretending there are no contexts.
+struct EngineErrorView: View {
+    let message: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Hy.s4) {
+            StarGlyph(state: .failed, size: 20)
+            Text("k10s could not read your contexts")
+                .font(Hy.display(24)).foregroundStyle(Hy.starlight)
+            Text(message)
+                .font(Hy.mono(12)).foregroundStyle(Hy.faint)
+                .textSelection(.enabled)
+                .padding(.horizontal, Hy.s4).padding(.vertical, Hy.s3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Hy.skyRaised)
+                .overlay(Rectangle().strokeBorder(Hy.neatline, lineWidth: 1))
+            Text("Quit and reopen k10s. If it happens again, run the engine from Terminal to see its log: Contents/Resources/bin/k10s-engine inside the app.")
+                .font(Hy.ui(14)).foregroundStyle(Hy.dust)
+        }
+        .frame(maxWidth: 560, alignment: .leading)
+        .padding(.horizontal, 48).padding(.vertical, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .background(Hy.sky)
     }
 }

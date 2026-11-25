@@ -36,7 +36,7 @@ struct CommandBar: View {
                             return .handled
                         }
                         .onKeyPress(.escape) { close(); return .handled }
-                        .onKeyPress(.return) { press in
+                        .onKeyPress(keys: [.return]) { press in
                             run(all, newTab: press.modifiers.contains(.command))
                             return .handled
                         }
