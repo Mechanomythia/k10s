@@ -1,0 +1,1 @@
+{"context":"prod","namespace":"default","pod":"web-1","container":"app","tailLines":500,"follow":true,"timestamps":true}

@@ -1,0 +1,1 @@
+{"contexts":[{"name":"prod","cluster":"prod-cluster","user":"admin","namespace":"default","current":true},{"name":"dev","cluster":"dev-cluster","user":"dev","namespace":"","current":false}]}

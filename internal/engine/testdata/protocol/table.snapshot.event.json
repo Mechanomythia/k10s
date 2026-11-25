@@ -1,0 +1,1 @@
+{"columns":[{"name":"Name"},{"name":"Ready"},{"name":"Status"}],"rows":[{"context":"prod","namespace":"default","name":"web-1","uid":"u1","cells":["web-1","1/1","Running"],"health":"ok"},{"context":"prod","name":"node-1","uid":"u2","cells":["node-1","Ready"],"health":"none"}]}
