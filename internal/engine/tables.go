@@ -17,6 +17,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	utiljson "k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/rest"
 )
 
@@ -38,6 +39,7 @@ var (
 // watches shared between subscriptions.
 type Tables struct {
 	conns        *Conns
+	Metrics      *Metrics      // shared with whatever else needs metrics-server data
 	Linger       time.Duration // how long a watch outlives its last subscriber
 	SnapshotWait time.Duration // how long the first snapshot waits for slow contexts
 
@@ -47,7 +49,7 @@ type Tables struct {
 
 // NewTables returns Tables with the ADR's 30 s linger and a 2 s snapshot wait.
 func NewTables(conns *Conns) *Tables {
-	return &Tables{conns: conns, Linger: 30 * time.Second, SnapshotWait: 2 * time.Second, watches: map[watchKey]*sharedWatch{}}
+	return &Tables{conns: conns, Metrics: NewMetrics(conns), Linger: 30 * time.Second, SnapshotWait: 2 * time.Second, watches: map[watchKey]*sharedWatch{}}
 }
 
 // Register wires table.subscribe into s.
@@ -58,8 +60,18 @@ type watchKey struct {
 	resource  ResourceRef
 	namespace string // "" for every namespace or a cluster-scoped kind
 	selector  string
-	field     string // field selector
-	owner     string // owner uid
+	field     string // field selector: TableSubscribeParams.FieldSelector, or the overview's Warning events
+	owner     string // owner uid: only rows this object owns
+}
+
+// watchSub is what joins a shared watch: a table subscription, or an
+// overview's per-kind aggregation. The watch calls it under its lock.
+type watchSub interface {
+	reset(name string, cols []Column, rows map[string]Row)
+	relayout(name string, cols []Column, rows map[string]Row)
+	upsert(name string, cols []Column, r Row)
+	remove(r Row)
+	forbidden(name, msg string)
 }
 
 func (t *Tables) subscribe(ctx context.Context, params json.RawMessage) (func(Emit), error) {
@@ -76,7 +88,7 @@ func (t *Tables) subscribe(ctx context.Context, params json.RawMessage) (func(Em
 		stop := t.conns.Listen(s.state)
 		var ws []*sharedWatch
 		for _, name := range p.Contexts {
-			w := t.acquire(watchKey{name, p.Resource, ns, p.LabelSelector, p.FieldSelector, p.OwnerUID})
+			w := t.acquire(watchKey{context: name, resource: p.Resource, namespace: ns, selector: p.LabelSelector, field: p.FieldSelector, owner: p.OwnerUID})
 			w.join(s)
 			ws = append(ws, w)
 		}
@@ -101,7 +113,17 @@ func (t *Tables) acquire(k watchKey) *sharedWatch {
 	w := t.watches[k]
 	if w == nil {
 		ctx, cancel := context.WithCancel(context.Background())
-		w = &sharedWatch{key: k, conns: t.conns, cancel: cancel, subs: map[*tableSub]bool{}}
+		w = &sharedWatch{key: k, conns: t.conns, cancel: cancel, subs: map[watchSub]bool{}}
+		if k.resource.Group == "" && k.resource.Version == "v1" && (k.resource.Plural == "pods" || k.resource.Plural == "nodes") {
+			w.nodes = k.resource.Plural == "nodes"
+			if w.nodes {
+				w.mh = t.Metrics.AcquireNodes(k.context)
+			} else {
+				w.mh = t.Metrics.AcquirePods(k.context, k.namespace)
+			}
+			stop := w.mh.OnChange(w.metricsTick)
+			w.cancel = func() { cancel(); stop(); w.mh.Release() }
+		}
 		t.watches[k] = w
 		go w.run(ctx)
 	}
@@ -144,14 +166,85 @@ type sharedWatch struct {
 	rv   string
 
 	mu      sync.Mutex // guards the rest; held while calling subscribers, so they see events in order
-	subs    map[*tableSub]bool
+	subs    map[watchSub]bool
 	listed  bool
 	denied  string // the last 403 message, until a list succeeds
 	columns []Column
 	rows    map[string]Row // by uid, cells in columns order
+
+	// Metrics (pods and nodes tables only): columns and rows above are the
+	// server's (baseCols, base) plus the metric cells while metrics-server answers.
+	mh       *MetricsHandle
+	nodes    bool
+	avail    bool
+	baseCols []Column
+	baseRows map[string]Row
+	caps     map[string]capacity
 }
 
-func (w *sharedWatch) join(s *tableSub) {
+// apply derives columns and rows from the base table and the latest metrics.
+// The caller holds w.mu.
+func (w *sharedWatch) apply() {
+	w.columns, w.rows = w.baseCols, w.baseRows
+	if w.mh == nil {
+		return
+	}
+	usage, avail := w.mh.Usage()
+	w.avail = avail
+	if !avail {
+		return
+	}
+	names := podMetricCols
+	if w.nodes {
+		names = nodeMetricCols
+	}
+	w.columns = append(slices.Clone(w.baseCols), make([]Column, len(names))...)
+	for i, n := range names {
+		w.columns[len(w.baseCols)+i] = Column{Name: n}
+	}
+	w.rows = make(map[string]Row, len(w.baseRows))
+	for uid, r := range w.baseRows {
+		w.rows[uid] = w.decorate(r, usage)
+	}
+}
+
+// decorate appends the metric cells to a base row.
+func (w *sharedWatch) decorate(r Row, usage map[string]Usage) Row {
+	k := r.Name
+	if !w.nodes {
+		k = r.Namespace + "/" + r.Name
+	}
+	u, have := usage[k]
+	r.Cells = append(slices.Clone(r.Cells), metricCells(w.nodes, u, have, w.caps[r.UID])...)
+	return r
+}
+
+// metricsTick follows a metrics poll: it upserts the rows whose cells
+// changed, or, when metrics came or went, resends the table with new columns.
+func (w *sharedWatch) metricsTick() {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if !w.listed {
+		return
+	}
+	was, old := w.avail, w.rows
+	w.apply()
+	if w.avail != was {
+		for s := range w.subs {
+			s.relayout(w.key.context, w.columns, w.rows)
+		}
+		return
+	}
+	for uid, r := range w.rows {
+		if !slices.Equal(r.Cells, old[uid].Cells) {
+			for s := range w.subs {
+				s.upsert(w.key.context, w.columns, r)
+			}
+		}
+	}
+}
+
+func (w *sharedWatch) join(s watchSub) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.subs[s] = true
@@ -163,7 +256,7 @@ func (w *sharedWatch) join(s *tableSub) {
 	}
 }
 
-func (w *sharedWatch) leave(s *tableSub) {
+func (w *sharedWatch) leave(s watchSub) {
 	w.mu.Lock()
 	delete(w.subs, s)
 	w.mu.Unlock()
@@ -246,19 +339,23 @@ func (w *sharedWatch) list(ctx context.Context) error {
 	for i, c := range tbl.ColumnDefinitions {
 		cols[i] = Column{Name: c.Name, Priority: int(c.Priority)}
 	}
-	rows := map[string]Row{}
+	rows, caps := map[string]Row{}, map[string]capacity{}
 	for _, r := range tbl.Rows {
-		if row, _, ok := w.row(r); ok {
-			rows[row.UID] = row
+		if row, _, c, owned := w.row(r); owned {
+			rows[row.UID], caps[row.UID] = row, c
 		}
 	}
 	w.rv = tbl.ResourceVersion
 	w.conns.state(w.key.context, StateLive, "", "")
+	if w.mh != nil {
+		w.mh.Wait(lctx) // the first snapshot carries the metric columns if there are any
+	}
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	w.listed, w.columns, w.rows, w.denied = true, cols, rows, ""
+	w.listed, w.baseCols, w.baseRows, w.caps, w.denied = true, cols, rows, caps, ""
+	w.apply()
 	for s := range w.subs {
-		s.reset(w.key.context, cols, rows)
+		s.reset(w.key.context, w.columns, w.rows)
 	}
 	return nil
 }
@@ -295,18 +392,25 @@ func (w *sharedWatch) watch(ctx context.Context, backoff *time.Duration) error {
 		*backoff = minBackoff
 		w.mu.Lock()
 		for _, r := range tbl.Rows {
-			row, rv, owned := w.row(r)
+			row, rv, c, owned := w.row(r)
 			w.rv = rv
-			_, present := w.rows[row.UID]
+			_, present := w.baseRows[row.UID]
 			deleted := ev.Type == "DELETED"
 			switch {
 			case deleted && (owned || present) || !deleted && !owned && present:
 				// A row that lost its owner is gone like a deleted one.
+				delete(w.baseRows, row.UID)
+				delete(w.caps, row.UID)
 				delete(w.rows, row.UID)
 				for s := range w.subs {
 					s.remove(row)
 				}
 			case owned && !deleted:
+				w.baseRows[row.UID], w.caps[row.UID] = row, c
+				if w.mh != nil && w.avail {
+					usage, _ := w.mh.Usage()
+					row = w.decorate(row, usage)
+				}
 				w.rows[row.UID] = row
 				for s := range w.subs {
 					s.upsert(w.key.context, w.columns, row)
@@ -370,15 +474,20 @@ func (w *sharedWatch) path() string {
 }
 
 // row turns a Table row, whose object is the full object, into a Row and
-// the object's resource version; owned is false for a row the watch's owner
-// uid filters out.
-func (w *sharedWatch) row(r metav1.TableRow) (row Row, rv string, owned bool) {
+// the object's resource version, its capacity (pods and nodes with metrics)
+// and whether the watch's owner uid keeps it (always without an owner).
+func (w *sharedWatch) row(r metav1.TableRow) (row Row, rv string, c capacity, owned bool) {
 	obj := &unstructured.Unstructured{}
-	_ = json.Unmarshal(r.Object.Raw, &obj.Object)
+	_ = utiljson.Unmarshal(r.Object.Raw, &obj.Object) // integers as int64, as HealthOf's Nested* reads expect
 	cells := make([]string, len(r.Cells))
 	for i, c := range r.Cells {
 		if c != nil {
 			cells[i] = fmt.Sprint(c)
+		}
+	}
+	if w.mh != nil {
+		if c = podCapacity(obj.Object); w.nodes {
+			c = nodeCapacity(obj.Object)
 		}
 	}
 	owned = w.key.owner == ""
@@ -392,7 +501,8 @@ func (w *sharedWatch) row(r metav1.TableRow) (row Row, rv string, owned bool) {
 		UID:       string(obj.GetUID()),
 		Cells:     cells,
 		Health:    HealthOf(obj, time.Now()),
-	}, obj.GetResourceVersion(), owned
+		facts:     factsOf(w.key.resource, obj.Object),
+	}, obj.GetResourceVersion(), c, owned
 }
 
 // tableSub is one table.subscribe: it merges the rows of its contexts'
@@ -475,6 +585,32 @@ func (s *tableSub) reset(name string, cols []Column, rows map[string]Row) {
 	}
 }
 
+// relayout replaces a context's rows after its columns changed (metrics came
+// or went) and sends the snapshot again.
+func (s *tableSub) relayout(name string, cols []Column, rows map[string]Row) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	old := s.columns
+	if old == nil || len(cols) > len(old) || len(s.contexts) == 1 {
+		s.columns = cols
+	}
+	for other, m := range s.rows {
+		if other != name {
+			for uid, r := range m {
+				m[uid] = s.fit(old, r)
+			}
+		}
+	}
+	cur := make(map[string]Row, len(rows))
+	for uid, r := range rows {
+		cur[uid] = s.fit(cols, r)
+	}
+	s.rows[name] = cur
+	if s.sent {
+		s.snapshot()
+	}
+}
+
 func (s *tableSub) upsert(name string, cols []Column, r Row) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -511,6 +647,7 @@ func (s *tableSub) fit(cols []Column, r Row) Row {
 		}
 	}
 	r.Cells = cells
+	r.facts = nil
 	return r
 }
 

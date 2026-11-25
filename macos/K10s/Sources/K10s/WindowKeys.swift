@@ -44,6 +44,7 @@ struct WindowKeys: NSViewRepresentable {
         if isEscape {
             if tab.diveError != nil { tab.diveError = nil; return true }
             if tab.inspectorOpen { tab.inspectorOpen = false; return true }
+            if tab.table.healthFilter != nil { tab.table.healthFilter = nil; return true }
             if !tab.filter.isEmpty { tab.filter = ""; return true }
             if !tab.levels.isEmpty { tab.pop(); return true }
             return false
@@ -120,7 +121,7 @@ extension TabModel {
 
     /// Return and double-click: logs of the container, dive into children, else Describe.
     func activate() {
-        if diving { return }
+        if diving || showingOverview { return }
         if inContainers { _ = openInspector(.logs) } else if !diveIn() { _ = openInspector(.describe) }
     }
 

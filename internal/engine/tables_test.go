@@ -213,6 +213,13 @@ func startSub(t *testing.T, tb *Tables, p TableSubscribeParams) *testSub {
 	if err != nil {
 		t.Fatal(err)
 	}
+	return startRun(t, run, cancel)
+}
+
+// startRun runs a subscription's run with a recording emit that fails the
+// test on an emit after run returned.
+func startRun(t *testing.T, run func(Emit), cancel context.CancelFunc) *testSub {
+	t.Helper()
 	s := &testSub{ch: make(chan got, 1000), cancel: cancel, done: make(chan struct{})}
 	var returned atomic.Bool
 	go func() {

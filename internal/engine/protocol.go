@@ -11,21 +11,22 @@ import "encoding/json"
 
 // Request methods.
 const (
-	MethodContextsList    = "contexts.list"
-	MethodContextsWatch   = "contexts.watch"
-	MethodResourcesList   = "resources.list"
-	MethodTableSubscribe  = "table.subscribe"
-	MethodObjectYAML      = "object.yaml"
-	MethodObjectDescribe  = "object.describe"
-	MethodObjectEvents    = "object.events"
-	MethodObjectChildren  = "object.children"
-	MethodPodContainers   = "pod.containers"
-	MethodLogsSubscribe   = "logs.subscribe"
-	MethodObjectDelete    = "object.delete"
-	MethodWorkloadScale   = "workload.scale"
-	MethodWorkloadRestart = "workload.restart"
-	MethodObjectReplace   = "object.replace"
-	MethodUnsubscribe     = "unsubscribe"
+	MethodContextsList      = "contexts.list"
+	MethodContextsWatch     = "contexts.watch"
+	MethodResourcesList     = "resources.list"
+	MethodTableSubscribe    = "table.subscribe"
+	MethodOverviewSubscribe = "overview.subscribe"
+	MethodObjectYAML        = "object.yaml"
+	MethodObjectDescribe    = "object.describe"
+	MethodObjectEvents      = "object.events"
+	MethodObjectChildren    = "object.children"
+	MethodPodContainers     = "pod.containers"
+	MethodLogsSubscribe     = "logs.subscribe"
+	MethodObjectDelete      = "object.delete"
+	MethodWorkloadScale     = "workload.scale"
+	MethodWorkloadRestart   = "workload.restart"
+	MethodObjectReplace     = "object.replace"
+	MethodUnsubscribe       = "unsubscribe"
 )
 
 // Event names, carried in Event.Event.
@@ -38,6 +39,7 @@ const (
 	EventForbidden       = "forbidden"        // table.subscribe: data is Forbidden
 	EventLines           = "lines"            // logs.subscribe: data is Lines
 	EventEnd             = "end"              // logs.subscribe: data is End
+	EventSummary         = "summary"          // overview.subscribe: data is Summary
 )
 
 // Error codes.
@@ -177,6 +179,8 @@ type Row struct {
 	UID       string   `json:"uid"`
 	Cells     []string `json:"cells"`
 	Health    Health   `json:"health"`
+
+	facts *rowFacts // engine-internal, for the overview; never sent
 }
 
 // Column is one table column as printed by the API server.
@@ -357,4 +361,67 @@ type ReplaceParams struct {
 // ReplaceResult is the result of object.replace.
 type ReplaceResult struct {
 	ResourceVersion string `json:"resourceVersion"`
+}
+
+// OverviewSubscribeParams are the params of overview.subscribe (result
+// SubscribeResult). Each context gets summary events: the first as soon as
+// its data is in (or its state is known failing), then at most one every 5 s
+// and only when it changed.
+type OverviewSubscribeParams struct {
+	Contexts []string `json:"contexts"`
+}
+
+// Summary is the data of a summary event: one context's overview. An
+// unreachable or unauthorized context carries only Context, State, Error and
+// MetricsAvailable (false); the figures are left out.
+type Summary struct {
+	Context          string       `json:"context"`
+	State            ContextState `json:"state"`
+	Error            string       `json:"error,omitempty"`
+	Version          string       `json:"version,omitempty"` // the cluster's gitVersion
+	MetricsAvailable bool         `json:"metricsAvailable"`  // metrics-server answered
+	*SummaryFigures               // nil for a failing context
+}
+
+// SummaryFigures are a live context's counts, from the shared watches of
+// pods, nodes, deployments, statefulsets, daemonsets and Warning events (all
+// namespaces) and from node metrics.
+type SummaryFigures struct {
+	NodesReady          int   `json:"nodesReady"`
+	NodesTotal          int   `json:"nodesTotal"`
+	CPUUsedMilli        int64 `json:"cpuUsedMilli"`        // 0 without metrics
+	CPUAllocatableMilli int64 `json:"cpuAllocatableMilli"` // sum of node status.allocatable
+	MemUsedBytes        int64 `json:"memUsedBytes"`        // 0 without metrics
+	MemAllocatableBytes int64 `json:"memAllocatableBytes"`
+	PodsRunning         int   `json:"podsRunning"` // phase Running
+	PodsTotal           int   `json:"podsTotal"`
+	PodCapacity         int64 `json:"podCapacity"`  // sum of node status.allocatable.pods
+	PodsFailing         int   `json:"podsFailing"`  // pods with health failed
+	PodsDegraded        int   `json:"podsDegraded"` // pods with health degraded
+	// WorkloadsNotReady counts deployments, statefulsets and daemonsets whose
+	// health is pending or degraded (stopped counts as ready).
+	WorkloadsNotReady int            `json:"workloadsNotReady"`
+	WorkloadsTotal    int            `json:"workloadsTotal"`
+	WarningsLastHour  int            `json:"warningsLastHour"` // Warning events last seen in the last 60 min
+	TopNodes          []TopNode      `json:"topNodes"`         // at most 5: busiest by max(CPU %, memory %), or by name without metrics
+	RecentWarnings    []WarningEvent `json:"recentWarnings"`   // at most 10 from the last hour, newest first
+}
+
+// TopNode is one of a summary's busiest nodes. The percentages are of the
+// node's allocatable and absent without metrics.
+type TopNode struct {
+	Name       string `json:"name"`
+	Ready      bool   `json:"ready"`
+	CPUPercent *int   `json:"cpuPercent,omitempty"`
+	MemPercent *int   `json:"memPercent,omitempty"`
+}
+
+// WarningEvent is one Warning event of a summary.
+type WarningEvent struct {
+	LastSeen  string `json:"lastSeen"` // RFC 3339: lastTimestamp, else eventTime, else creation
+	Reason    string `json:"reason"`
+	Message   string `json:"message"`
+	Object    string `json:"object"` // Kind/name of the involved object
+	Namespace string `json:"namespace,omitempty"`
+	Count     int    `json:"count"`
 }

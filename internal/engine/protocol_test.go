@@ -49,6 +49,9 @@ var golden = map[string]func() any{
 	"object.replace.params":          func() any { return new(ReplaceParams) },
 	"object.replace.result":          func() any { return new(ReplaceResult) },
 	"table.forbidden.event":          func() any { return new(Forbidden) },
+	"overview.subscribe.params":      func() any { return new(OverviewSubscribeParams) },
+	"overview.summary.event":         func() any { return new(Summary) },
+	"overview.summary.failing.event": func() any { return new(Summary) },
 }
 
 func TestGolden(t *testing.T) {

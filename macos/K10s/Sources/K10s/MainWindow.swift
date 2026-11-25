@@ -101,6 +101,7 @@ struct WindowAccessor: NSViewRepresentable {
 
 struct MainWindow: View {
     @Environment(EngineClient.self) private var engine
+    @Environment(\.openWindow) private var openWindow
     @State private var tab: TabModel
 
     init(scope: TabScope) {
@@ -116,9 +117,14 @@ struct MainWindow: View {
                     KindsSidebar(tab: tab)
                     Rectangle().fill(Hy.neatline).frame(width: 1)
                 }
-                LevelsView(tab: tab)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                if tab.inspectorOpen {
+                if tab.showingOverview {
+                    OverviewPane(tab: tab)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    LevelsView(tab: tab)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                if tab.inspectorOpen && !tab.showingOverview {
                     Rectangle().fill(Hy.neatline).frame(width: 1)
                     InspectorPane(tab: tab)
                         .frame(width: tab.inspectorTab == .logs ? 720 : 480)
@@ -135,6 +141,7 @@ struct MainWindow: View {
         .sheet(isPresented: $tab.newTabOpen) { NewTabSheet(tab: tab) }
         .sheet(item: $tab.pendingAction) { PendingActionSheet(pending: $0) }
         .focusedSceneValue(\.tabModel, tab)
+        .onAppear { tab.openScope = { openWindow(value: $0) } }
         .onChange(of: tab.namespace) { tab.clearStack() }
         .task(id: engine.restarts) { tab.engine = engine; await tab.load(engine) }
         .task(id: engine.restarts) { await tab.watchNamespaces(engine) }

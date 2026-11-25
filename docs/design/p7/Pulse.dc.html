@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>k10s: cluster pulse</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="k10s.css">
+<link rel="stylesheet" href="ds/hyad/components/bundle.css">
+<script src="ds/hyad/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600&amp;family=Literata:opsz,wght@7..72,300;7..72,400&amp;family=Spline+Sans+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;padding:0 24px 24px;overflow:hidden}
+.plate{background:var(--sky-raised);border:1px solid var(--neatline);display:flex;flex-direction:column;min-height:0}
+.plate-h{display:flex;align-items:center;gap:12px;padding:0 16px;height:36px;border-bottom:1px solid var(--neatline)}
+.plate-h .c{margin-left:auto;font-family:var(--font-mono);font-size:11.5px;color:var(--faint)}
+.figs{display:flex;gap:32px;padding:16px}
+.fig{display:flex;flex-direction:column;gap:2px}
+.fig .v{font-family:var(--font-display);font-weight:300;font-size:36px;line-height:42px}
+.fig .v.k{color:var(--class-k)}
+.fig .v.m{color:var(--class-m)}
+.fig .l{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dust)}
+.fig .s{font-family:var(--font-mono);font-size:11.5px;color:var(--faint)}
+.mini{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:12px}
+.mini td{padding:0 16px;height:30px;border-top:1px solid var(--neatline);white-space:nowrap}
+.mini td.d{color:var(--dust)}
+.mini td.f{color:var(--faint)}
+.mini td.k{color:var(--class-k)}
+.mini td.m{color:var(--class-m)}
+.mini td.w{white-space:normal;color:var(--dust);font-family:var(--font-ui);font-size:12.5px}
+</style>
+</helmet>
+<div class="win">
+  <div class="toolbar">
+    <div class="lights" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="scope"><span class="label">Context</span><span class="ctx"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s12 }}" show-label="{{ no }}"></x-import>gke_hue-resources-dev_europe-west4_remote-access-eu</span></div>
+    <div class="grow"></div>
+    <span class="kbd">:</span><span style="color: var(--dust); font-size: 12px;">command</span>
+  </div>
+  <nav class="tabs" aria-label="Tabs">
+    <a class="tab" href="Fleet.dc.html"><x-import component-from-global-scope="Hyad.Star" state="degraded" size="{{ s9 }}" show-label="{{ no }}"></x-import>all · 25 clusters<span class="n">⌘1</span></a>
+    <a class="tab on" href="#"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s9 }}" show-label="{{ no }}"></x-import>remote-access-eu (dev)<span class="n">⌘2</span></a>
+    <a class="tab add" href="#">New tab ⌘T</a>
+  </nav>
+  <div class="body">
+    <nav class="side" aria-label="Kinds">
+      <a class="on" href="#">Overview<span class="c"></span></a>
+      <span class="label">Workloads</span>
+      <a href="#">Pods<span class="c">544</span></a>
+      <a href="#">Deployments<span class="c">71</span></a>
+      <span class="label">Cluster</span>
+      <a href="#">Nodes<span class="c">12</span></a>
+      <a href="#">Events<span class="c"></span></a>
+    </nav>
+    <section class="list">
+      <div class="head"><h1>Overview</h1><span class="meta">v1.33.4 · 12 nodes · updated 3 s ago</span></div>
+      <div class="grid">
+        <div class="plate">
+          <div class="plate-h"><span class="label">Capacity</span><span class="c">used / allocatable</span></div>
+          <div class="figs">
+            <div class="fig"><span class="v">58 %</span><span class="l">CPU</span><span class="s">27.8 of 48 cores</span></div>
+            <div class="fig"><span class="v m">96 %</span><span class="l">Memory</span><span class="s">176 of 184 GiB</span></div>
+            <div class="fig"><span class="v">544</span><span class="l">Pods</span><span class="s">of 1,320 schedulable</span></div>
+          </div>
+        </div>
+        <div class="plate">
+          <div class="plate-h"><span class="label">Workloads</span><span class="c">all namespaces</span></div>
+          <div class="figs">
+            <div class="fig"><span class="v m">1</span><span class="l">Failing pods</span><span class="s">CrashLoopBackOff</span></div>
+            <div class="fig"><span class="v">0</span><span class="l">Degraded</span><span class="s">pods</span></div>
+            <div class="fig"><span class="v">0</span><span class="l">Not ready</span><span class="s">of 71 workloads</span></div>
+          </div>
+        </div>
+        <div class="plate">
+          <div class="plate-h"><span class="label">Nodes</span><span class="c">busiest first</span></div>
+          <table class="mini">
+            <tbody>
+              <tr><td>gke-remote-access-eu-pool-2-7c1e</td><td class="m">CPU 71 %</td><td class="m">mem 98 %</td><td class="f">Ready</td></tr>
+              <tr><td>gke-remote-access-eu-pool-2-91ab</td><td class="d">CPU 66 %</td><td class="m">mem 97 %</td><td class="f">Ready</td></tr>
+              <tr><td>gke-remote-access-eu-pool-2-0f42</td><td class="d">CPU 62 %</td><td class="k">mem 94 %</td><td class="f">Ready</td></tr>
+              <tr><td>gke-remote-access-eu-pool-1-3d08</td><td class="d">CPU 49 %</td><td class="k">mem 91 %</td><td class="f">Ready</td></tr>
+              <tr><td>gke-remote-access-eu-pool-1-b6e5</td><td class="d">CPU 44 %</td><td class="k">mem 88 %</td><td class="f">Ready</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="plate">
+          <div class="plate-h"><span class="label">Warnings, last hour</span><span class="c">9</span></div>
+          <table class="mini">
+            <tbody>
+              <tr><td class="f">2 m</td><td class="k">BackOff</td><td class="w">Back-off restarting failed container worker in pod session-sync-6d9c…</td></tr>
+              <tr><td class="f">6 m</td><td class="k">FailedScheduling</td><td class="w">0/12 nodes are available: 12 Insufficient memory.</td></tr>
+              <tr><td class="f">14 m</td><td class="k">Unhealthy</td><td class="w">Readiness probe failed: HTTP probe failed with statuscode: 503</td></tr>
+              <tr><td class="f">31 m</td><td class="k">OOMKilled</td><td class="w">Container relay in pod tunnel-relay-58b7… was OOM killed</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+  <footer class="status">
+    <span><span class="kbd">/</span> filter</span><span><span class="kbd">:</span> command</span>
+    <span class="r">remote-access-eu (dev) · v1.33.4 · read-only overview</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic { renderVals() { return { no: false, s9: 9, s12: 12 }; } }
+</script>
+</body>
+</html>

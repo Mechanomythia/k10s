@@ -78,6 +78,7 @@ struct ListPane: View {
         var t = TableModel(contexts: contexts)
         let cur = table
         t.filter = cur.filter
+        t.healthFilter = cur.healthFilter
         t.wide = cur.wide
         t.sortColumn = cur.sortColumn
         t.ascending = cur.ascending
@@ -123,6 +124,7 @@ struct ListPane: View {
         let total = table.totalCount
         VStack(alignment: .leading, spacing: 0) {
             header(kind: kind, total: total, failed: failing.count)
+            if let hf = table.healthFilter { healthBanner(kind: kind, set: hf) }
             if contexts.count > 1 {
                 ForEach(failing, id: \.self) { notice($0) }
             }
@@ -168,6 +170,24 @@ struct ListPane: View {
                 .font(Hy.mono(12)).foregroundStyle(Hy.faint)
         }
         .padding(.horizontal, Hy.s5).padding(.top, Hy.s4).padding(.bottom, Hy.s3)
+    }
+
+    private func healthBanner(kind: KindEntry, set: Set<Health>) -> some View {
+        let word: String
+        switch set {
+        case [.failed]: word = "failing"
+        case [.degraded]: word = "degraded"
+        case [.pending, .degraded]: word = "not ready"
+        default: word = "filtered"
+        }
+        return HStack(spacing: Hy.s3) {
+            Text("Showing \(word) \(kind.plural.lowercased())")
+                .font(Hy.mono(12)).foregroundStyle(Hy.dust)
+            Text("·").font(Hy.mono(12)).foregroundStyle(Hy.faint)
+            Button("Clear") { mutate { $0.healthFilter = nil } }
+                .buttonStyle(HyButton(kind: .quiet, small: true))
+        }
+        .padding(.horizontal, Hy.s5).padding(.bottom, Hy.s3)
     }
 
     private func notice(_ ctx: String) -> some View {

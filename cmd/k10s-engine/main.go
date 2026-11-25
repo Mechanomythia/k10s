@@ -34,7 +34,9 @@ func main() {
 	kube.Register(s)
 	(&engine.Detail{Conns: conns}).Register(s)
 	conns.Register(s)
-	engine.NewTables(conns).Register(s)
+	tables := engine.NewTables(conns)
+	tables.Register(s)
+	engine.NewOverview(tables).Register(s)
 	if err := s.Serve(ctx, os.Stdin, os.Stdout); err != nil {
 		log.Fatalf("k10s-engine: %v", err)
 	}
