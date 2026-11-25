@@ -187,11 +187,17 @@ struct ListPane: View {
             ScrollView(.horizontal) {
                 VStack(alignment: .leading, spacing: 0) {
                     headerRow(columns: columns, widths: w)
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(rows, id: \.rowKey) { row in
-                                dataRow(row, widths: w, rows: rows)
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 0) {
+                                ForEach(rows, id: \.rowKey) { row in
+                                    dataRow(row, widths: w, rows: rows)
+                                }
                             }
+                        }
+                        // Keyboard moves (j/k, arrows) keep the selected row in view.
+                        .onChange(of: tab.selection?.rowKey) { _, key in
+                            if let key { proxy.scrollTo(key) }
                         }
                     }
                 }

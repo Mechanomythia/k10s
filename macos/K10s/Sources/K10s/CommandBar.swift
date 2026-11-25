@@ -203,28 +203,3 @@ struct CommandBar: View {
         }
     }
 }
-
-/// Window-level key handling: ":" opens the bar, "/" focuses the filter, Esc closes bar, then inspector, then clears the filter.
-struct CommandKeys: ViewModifier {
-    var tab: TabModel
-    @FocusState private var focused: Bool
-
-    func body(content: Content) -> some View {
-        content
-            .focusable()
-            .focusEffectDisabled()
-            .focused($focused)
-            .onAppear { focused = true }
-            .onKeyPress(characters: CharacterSet(charactersIn: ":/")) { press in
-                if press.characters == ":" { tab.commandBarOpen = true } else { tab.focusFilter = true }
-                return .handled
-            }
-            .onKeyPress(.escape) {
-                if tab.commandBarOpen { tab.commandBarOpen = false }
-                else if tab.inspectorOpen { tab.inspectorOpen = false }
-                else if !tab.filter.isEmpty { tab.filter = "" }
-                else { return .ignored }
-                return .handled
-            }
-    }
-}

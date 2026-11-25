@@ -99,7 +99,7 @@ struct MainWindow: View {
             StatusBar(tab: tab)
         }
         .background(Hy.sky)
-        .modifier(CommandKeys(tab: tab))
+        .background(WindowKeys(tab: tab))
         .overlay(alignment: .top) {
             if tab.commandBarOpen { CommandBar(tab: tab) }
         }
