@@ -49,12 +49,23 @@ final class TabModel {
     var newTabOpen = false
     /// Set to true to focus the filter field; the toolbar resets it.
     var focusFilter = false
+    /// True: the centre shows the overview instead of the list.
+    var showingOverview: Bool
+    /// Opens a native tab for a scope; set by MainWindow from the openWindow environment action.
+    @ObservationIgnored var openScope: ((TabScope) -> Void)?
 
     @ObservationIgnored private var namespaceInitialized = false
 
     init(scope: TabScope) {
         self.scope = scope
         self.table = TableModel(contexts: scope.contexts)
+        self.table.healthFilter = scope.health
+        self.showingOverview = scope.overview ?? (scope.contexts.count > 1)
+    }
+
+    /// Opens a new native tab on one context, optionally on the overview or a kind with a health filter.
+    func openTab(context: String, overview: Bool, kindPlural: String?, health: Set<Health>?) {
+        openScope?(TabScope(contexts: [context], overview: overview, kindPlural: kindPlural, health: health))
     }
 
     var filter: String {
@@ -64,6 +75,7 @@ final class TabModel {
 
     func select(kind: KindEntry) {
         self.kind = kind
+        showingOverview = false
         selection = nil
     }
 
@@ -91,7 +103,8 @@ final class TabModel {
         }
         catalog = KindCatalog(perContext: lists)
         if kind == nil {
-            kind = catalog.kinds.first { $0.plural == "pods" && $0.group.isEmpty }
+            kind = scope.kindPlural.flatMap { p in catalog.kinds.first { $0.plural == p } }
+                ?? catalog.kinds.first { $0.plural == "pods" && $0.group.isEmpty }
         }
     }
 

@@ -8,6 +8,8 @@ public struct TableModel {
     public var sortColumn: String?
     public var ascending = true
     public var filter = ""
+    /// Keep only rows whose health is in the set; nil keeps all.
+    public var healthFilter: Set<Health>?
 
     private var allColumns: [Column] = []
     private var store: [String: Row] = [:]
@@ -53,6 +55,7 @@ public struct TableModel {
     /// Filtered and sorted rows.
     public var rows: [Row] {
         var list = Array(store.values)
+        if let healthFilter { list = list.filter { healthFilter.contains($0.health) } }
         let t = filter.trimmingCharacters(in: .whitespaces)
         if !t.isEmpty && labelSelector == nil {
             list = list.filter { $0.name.range(of: t, options: .caseInsensitive) != nil }

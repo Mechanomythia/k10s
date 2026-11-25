@@ -95,6 +95,7 @@ struct KindsSidebar: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Hy.s4) {
+                overviewRow
                 ForEach(tab.catalog.sections, id: \.title) { section in
                     VStack(alignment: .leading, spacing: 2) {
                         HyLabel(section.title)
@@ -112,8 +113,24 @@ struct KindsSidebar: View {
         .background(Hy.skyRaised)
     }
 
+    private var overviewRow: some View {
+        Button { tab.showingOverview = true } label: {
+            HStack {
+                Text("Overview")
+                    .font(Hy.ui(13))
+                    .foregroundStyle(tab.showingOverview ? Hy.starlight : Hy.dust)
+                Spacer()
+            }
+            .padding(.horizontal, Hy.s3)
+            .frame(height: 28)
+            .background(tab.showingOverview ? Hy.skyHigh : Color.clear)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     private func row(_ entry: KindEntry, custom: Bool) -> some View {
-        let selected = tab.kind == entry
+        let selected = tab.kind == entry && !tab.showingOverview
         return Button { tab.select(kind: entry) } label: {
             HStack {
                 Text(custom ? entry.plural : entry.plural.capitalized)

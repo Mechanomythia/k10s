@@ -75,6 +75,7 @@ struct NewTabSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Hy.s1) {
                 HyLabel("Saved sets").padding(.bottom, Hy.s1)
+                scopeRow(TabScope(contexts: all.map(\.name)), title: "All contexts")
                 ForEach(sets.list(), id: \.self) { scopeRow($0, title: $0.name ?? "") }
                 HyLabel("Recent").padding(.top, Hy.s4).padding(.bottom, Hy.s1)
                 ForEach(sets.recent, id: \.self) { scopeRow($0, title: $0.displayName) }

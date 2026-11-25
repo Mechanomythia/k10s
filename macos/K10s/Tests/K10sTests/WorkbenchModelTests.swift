@@ -151,3 +151,32 @@ final class WorkbenchModelTests: XCTestCase {
         XCTAssertEqual(SavedSets(defaults: d).recent.map { $0.contexts[0] }, ["c4", "c6", "c5", "c3", "c2"])
     }
 }
+
+final class HealthFilterTests: XCTestCase {
+    private func healthRow(_ name: String, _ health: String) -> Row {
+        decode("{\"context\":\"c1\",\"name\":\"\(name)\",\"uid\":\"\(name)\",\"cells\":[\"\(name)\"],\"health\":\"\(health)\"}")
+    }
+
+    func testHealthFilter() {
+        var t = TableModel(contexts: ["c1"])
+        for (n, h) in [("a", "ok"), ("b", "failed"), ("c", "degraded"), ("d", "pending")] {
+            t.apply(upsert(healthRow(n, h)))
+        }
+        XCTAssertEqual(t.filteredCount, 4)
+        t.healthFilter = [.failed]
+        XCTAssertEqual(t.rows.map(\.name), ["b"])
+        t.healthFilter = [.pending, .degraded]
+        XCTAssertEqual(t.filteredCount, 2)
+        XCTAssertEqual(t.totalCount, 4)
+        t.healthFilter = nil
+        XCTAssertEqual(t.filteredCount, 4)
+    }
+
+    func testScopePresetIsBackwardCompatible() throws {
+        let old = try JSONDecoder().decode(TabScope.self, from: Data("{\"contexts\":[\"a\"]}".utf8))
+        XCTAssertNil(old.overview)
+        let s = TabScope(contexts: ["a"], overview: false, kindPlural: "pods", health: [.failed])
+        let back = try JSONDecoder().decode(TabScope.self, from: JSONEncoder().encode(s))
+        XCTAssertEqual(back, s)
+    }
+}

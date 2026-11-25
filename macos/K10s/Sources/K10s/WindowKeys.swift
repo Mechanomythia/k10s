@@ -43,6 +43,7 @@ struct WindowKeys: NSViewRepresentable {
 
         if isEscape {
             if tab.inspectorOpen { tab.inspectorOpen = false; return true }
+            if tab.table.healthFilter != nil { tab.table.healthFilter = nil; return true }
             if !tab.filter.isEmpty { tab.filter = ""; return true }
             return false
         }

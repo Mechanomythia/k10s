@@ -3,10 +3,18 @@ import Foundation
 public struct TabScope: Codable, Hashable {
     public var contexts: [String]
     public var name: String?
+    /// Optional preset for a tab opened from the overview; nil keeps the defaults.
+    public var overview: Bool?
+    public var kindPlural: String?
+    public var health: Set<Health>?
 
-    public init(contexts: [String], name: String? = nil) {
+    public init(contexts: [String], name: String? = nil, overview: Bool? = nil,
+                kindPlural: String? = nil, health: Set<Health>? = nil) {
         self.contexts = contexts
         self.name = name
+        self.overview = overview
+        self.kindPlural = kindPlural
+        self.health = health
     }
 
     public var displayName: String {
