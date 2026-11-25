@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>k10s: logs, following</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="k10s.css">
+<link rel="stylesheet" href="ds/hyad/components/bundle.css">
+<script src="ds/hyad/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600&amp;family=Literata:opsz,wght@7..72,300;7..72,400&amp;family=Spline+Sans+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}a{color:#bdd1ff}a:hover{color:#ece7dd}
+.logbar{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--neatline);flex-wrap:wrap}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--dust)}
+.chk input{accent-color:#bdd1ff;margin:0}
+.log{flex:1;margin:0;padding:12px 16px;font-family:var(--font-mono);font-size:12px;line-height:19px;color:var(--starlight);overflow:hidden}
+.ln{display:flex;gap:12px;white-space:pre}
+.ln .ts{color:var(--faint)}
+.ln.warn .msg{color:var(--class-k)}
+.ln.err .msg{color:var(--class-m)}
+.tail{display:flex;align-items:center;gap:8px;padding:8px 16px;border-top:1px solid var(--neatline);font-size:12px;color:var(--dust)}
+</style>
+</helmet>
+<div class="win">
+  <div class="toolbar">
+    <div class="lights" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="scope">
+      <span class="label">Context</span>
+      <span class="ctx"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s12 }}" show-label="{{ no }}"></x-import>prod-eu</span>
+    </div>
+    <div class="sep"></div>
+    <button class="picker" type="button"><span class="k">Namespace</span><span class="mono">payments</span></button>
+    <input class="filter" type="text" aria-label="Filter" placeholder="/ filter by name or label">
+    <div class="grow"></div>
+    <span class="kbd">:</span><span style="color: var(--dust); font-size: 12px;">command</span>
+  </div>
+  <nav class="tabs" aria-label="Tabs">
+    <a class="tab on" href="Main.dc.html"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s9 }}" show-label="{{ no }}"></x-import>prod-eu<span class="n">⌘1</span></a>
+    <a class="tab" href="MultiContext.dc.html"><x-import component-from-global-scope="Hyad.Star" state="degraded" size="{{ s9 }}" show-label="{{ no }}"></x-import>prod · 3 clusters<span class="n">⌘2</span></a>
+    <a class="tab" href="#"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s9 }}" show-label="{{ no }}"></x-import>staging<span class="n">⌘3</span></a>
+    <a class="tab add" href="NewTab.dc.html" aria-label="New tab">New tab ⌘T</a>
+  </nav>
+  <div class="body">
+    <section class="list">
+      <div class="head"><h1>Pods</h1><span class="meta">42 in payments · watching</span></div>
+      <table class="tbl">
+        <thead><tr><th aria-label="Health"></th><th>Name</th><th>Ready</th><th>Status</th><th>Restarts</th></tr></thead>
+        <tbody>
+          <sc-for list="{{ pods }}" as="p" hint-placeholder-count="10">
+            <tr class="{{ p.cls }}"><td><x-import component-from-global-scope="Hyad.Star" state="{{ p.state }}" size="{{ s12 }}" show-label="{{ no }}"></x-import></td><td>{{ p.name }}</td><td>{{ p.ready }}</td><td class="{{ p.statusCls }}">{{ p.status }}</td><td class="{{ p.statusCls }}">{{ p.restarts }}</td></tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </section>
+    <aside class="insp wide" aria-label="Inspector">
+      <div class="insp-h">
+        <span class="t">ledger-worker-5c6b9d7f8-kd2lp</span>
+        <span class="s">Pod · payments · prod-eu · CrashLoopBackOff, 14 restarts</span>
+      </div>
+      <nav class="seg" aria-label="Inspector views">
+        <a href="#">Describe<span class="kbd">d</span></a>
+        <a href="#">YAML<span class="kbd">y</span></a>
+        <a href="#">Events<span class="kbd">e</span></a>
+        <a class="on" href="#">Logs<span class="kbd">l</span></a>
+      </nav>
+      <div class="logbar">
+        <button class="picker" type="button" style="height: 26px;"><span class="k">Container</span><span class="mono">worker</span></button>
+        <label class="chk"><input type="checkbox" checked>Follow</label>
+        <label class="chk"><input type="checkbox">Previous run</label>
+        <label class="chk"><input type="checkbox" checked>Timestamps</label>
+        <label class="chk"><input type="checkbox">Wrap</label>
+        <div class="grow"></div>
+        <input class="filter" type="text" aria-label="Find in logs" placeholder="find" style="max-width: 160px; height: 26px;">
+      </div>
+      <div class="log" role="log" aria-label="Logs">
+        <sc-for list="{{ lines }}" as="l" hint-placeholder-count="20">
+          <div class="{{ l.cls }}"><span class="ts">{{ l.ts }}</span><span class="msg">{{ l.msg }}</span></div>
+        </sc-for>
+      </div>
+      <div class="tail">
+        <x-import component-from-global-scope="Hyad.Star" state="building" size="{{ s9 }}" show-label="{{ no }}"></x-import>
+        <span>Following. Last 500 lines, then new lines as they arrive.</span>
+        <div class="grow"></div>
+        <span class="mono" style="color: var(--faint);">612 lines</span>
+      </div>
+    </aside>
+  </div>
+  <footer class="status">
+    <span><span class="kbd">f</span> follow</span>
+    <span><span class="kbd">p</span> previous</span>
+    <span><span class="kbd">c</span> container</span>
+    <span><span class="kbd">⌘F</span> find</span>
+    <span><span class="kbd">esc</span> back</span>
+    <span class="r">prod-eu · read-only</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = (state, name, ready, status, restarts, extra) => Object.assign({ state, name, ready, status, restarts, cls: '', statusCls: '' }, extra || {});
+    const L = (ts, msg, kind) => ({ ts, msg, cls: 'ln' + (kind ? ' ' + kind : '') });
+    return {
+      no: false, s9: 9, s12: 12,
+      pods: [
+        P('live', 'checkout-api-7d9f8b6c4-x2kqp', '2/2', 'Running', '0'),
+        P('live', 'checkout-api-7d9f8b6c4-m8wzt', '2/2', 'Running', '0'),
+        P('failed', 'ledger-worker-5c6b9d7f8-kd2lp', '0/1', 'CrashLoopBackOff', '14', { cls: 'sel', statusCls: 'm' }),
+        P('degraded', 'ledger-worker-5c6b9d7f8-r7tnx', '1/1', 'Running', '3'),
+        P('live', 'payments-gateway-6f8d5c9b7-2xjqs', '2/2', 'Running', '0'),
+        P('building', 'refunds-api-84c7b6d5f-zl4mc', '0/2', 'ContainerCreating', '0'),
+        P('stopped', 'invoice-export-29105760-8gq2c', '0/1', 'Completed', '0'),
+        P('live', 'redis-payments-0', '1/1', 'Running', '0'),
+        P('live', 'webhook-relay-6b5f9d8c7-pq3ns', '1/1', 'Running', '0'),
+        P('live', 'fraud-score-55d8f7b6c-tx9mw', '1/1', 'Running', '1')
+      ],
+      lines: [
+        L('10:03:41.102', 'level=info msg="starting ledger-worker" version=2.8.1'),
+        L('10:03:41.118', 'level=info msg="loading config" path=/etc/ledger/config.yaml'),
+        L('10:03:41.240', 'level=info msg="connecting to postgres" host=ledger-db.payments.svc port=5432'),
+        L('10:03:41.391', 'level=info msg="connected" pool=8'),
+        L('10:03:41.402', 'level=info msg="running migrations" from=41 to=42'),
+        L('10:03:41.977', 'level=info msg="migration applied" id=42 name=add_settlement_batches'),
+        L('10:03:42.004', 'level=info msg="subscribing" topic=payments.settled group=ledger'),
+        L('10:03:42.311', 'level=warn msg="consumer lag high" partition=3 lag=18211', 'warn'),
+        L('10:03:42.315', 'level=info msg="processing batch" size=500 partition=3'),
+        L('10:03:42.902', 'level=info msg="batch committed" size=500 ms=587'),
+        L('10:03:42.906', 'level=info msg="processing batch" size=500 partition=3'),
+        L('10:03:43.488', 'level=info msg="batch committed" size=500 ms=582'),
+        L('10:03:43.491', 'level=info msg="processing batch" size=500 partition=3'),
+        L('10:03:43.770', 'level=error msg="insert failed" err="duplicate key value violates unique constraint settlement_batches_pkey"', 'err'),
+        L('10:03:43.771', 'level=error msg="batch aborted" partition=3 offset=88120411', 'err'),
+        L('10:03:43.772', 'level=info msg="shutting down" reason="unrecoverable batch error"'),
+        L('10:03:43.790', 'level=info msg="consumer closed"'),
+        L('10:03:43.801', 'level=info msg="postgres pool closed"'),
+        L('10:03:43.802', 'exit status 1', 'err')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

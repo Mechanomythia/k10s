@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>k10s: new tab, choose a context set</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="k10s.css">
+<link rel="stylesheet" href="ds/hyad/components/bundle.css">
+<script src="ds/hyad/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600&amp;family=Literata:opsz,wght@7..72,300;7..72,400&amp;family=Spline+Sans+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}a{color:#bdd1ff}a:hover{color:#ece7dd}
+.sheet{position:absolute;left:50%;top:84px;transform:translateX(-50%);width:880px;background:var(--sky-raised);border:1px solid var(--neatline-strong);border-radius:var(--radius-2);box-shadow:var(--lift);display:flex;flex-direction:column}
+.sh-h{padding:24px 24px 16px;display:flex;flex-direction:column;gap:4px}
+.sh-h h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:24px;line-height:30px}
+.sh-h p{margin:0;color:var(--dust);font-size:13px}
+.sh-b{display:flex;border-top:1px solid var(--neatline);border-bottom:1px solid var(--neatline);min-height:440px}
+.sets{width:240px;flex:none;border-right:1px solid var(--neatline);padding:16px 0}
+.sets .label{padding:0 16px 8px;display:block}
+.set{display:flex;flex-direction:column;gap:2px;padding:8px 16px;color:var(--starlight);text-decoration:none}
+.set .d{font-family:var(--font-mono);font-size:11.5px;color:var(--faint)}
+.set.on{background:var(--sky-high);box-shadow:inset 2px 0 0 var(--starlight)}
+.ctxs{flex:1;padding:16px 0;min-width:0}
+.ctxs .top{display:flex;align-items:center;gap:12px;padding:0 24px 12px}
+.row{display:grid;grid-template-columns:20px 20px minmax(0,1.1fr) minmax(0,1.6fr) 120px;align-items:center;gap:12px;padding:0 24px;height:40px;border-top:1px solid var(--neatline)}
+.row input{accent-color:#bdd1ff;margin:0;width:14px;height:14px}
+.row .n{font-family:var(--font-mono);font-size:13px}
+.row .c{font-family:var(--font-mono);font-size:12px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .s{font-size:12px;color:var(--dust)}
+.sh-f{display:flex;align-items:flex-end;gap:16px;padding:16px 24px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld input{height:32px;box-sizing:border-box;width:260px;padding:0 12px;background:var(--sky);border:1px solid var(--neatline-strong);border-radius:var(--radius-1);color:var(--starlight);font-family:var(--font-mono);font-size:13px}
+</style>
+</helmet>
+<div class="win">
+  <div class="toolbar">
+    <div class="lights" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="scope"><span class="label">Context</span><span class="ctx"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s12 }}" show-label="{{ no }}"></x-import>prod-eu</span></div>
+    <div class="grow"></div>
+  </div>
+  <nav class="tabs" aria-label="Tabs">
+    <a class="tab" href="Main.dc.html"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s9 }}" show-label="{{ no }}"></x-import>prod-eu<span class="n">⌘1</span></a>
+    <a class="tab" href="MultiContext.dc.html"><x-import component-from-global-scope="Hyad.Star" state="degraded" size="{{ s9 }}" show-label="{{ no }}"></x-import>prod · 3 clusters<span class="n">⌘2</span></a>
+    <a class="tab" href="#"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s9 }}" show-label="{{ no }}"></x-import>staging<span class="n">⌘3</span></a>
+    <a class="tab on" href="#">New tab<span class="n">⌘4</span></a>
+  </nav>
+  <div class="body"><section class="list"></section></div>
+  <footer class="status"><span class="r">8 contexts in ~/.kube/config, ~/.kube/eks.yaml</span></footer>
+  <div style="position: absolute; inset: 0; background: var(--scrim);"></div>
+  <div class="sheet" role="dialog" aria-label="New tab">
+    <div class="sh-h">
+      <h2>Open contexts in a new tab</h2>
+      <p>Pick one context to work like k9s, or several to read them side by side. Nothing connects until the tab opens.</p>
+    </div>
+    <div class="sh-b">
+      <nav class="sets" aria-label="Saved sets">
+        <span class="label">Saved sets</span>
+        <a class="set on" href="#">prod<span class="d">prod-eu, prod-us, prod-ap</span></a>
+        <a class="set" href="#">eu<span class="d">prod-eu, staging-eu</span></a>
+        <a class="set" href="#">all non-prod<span class="d">4 contexts</span></a>
+        <span class="label" style="margin-top: 16px;">Recent</span>
+        <a class="set" href="#">staging<span class="d">opened 2 h ago</span></a>
+        <a class="set" href="#">kind-dev<span class="d">opened yesterday</span></a>
+      </nav>
+      <div class="ctxs">
+        <div class="top">
+          <span class="label">Contexts</span>
+          <div class="grow"></div>
+          <input class="filter" type="text" aria-label="Filter contexts" placeholder="filter" style="max-width: 200px; height: 28px;">
+        </div>
+        <sc-for list="{{ ctxs }}" as="c" hint-placeholder-count="8">
+          <label class="row">
+            <input type="checkbox" checked="{{ c.on }}">
+            <sc-if value="{{ c.hasState }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="Hyad.Star" state="{{ c.state }}" size="{{ s12 }}" show-label="{{ no }}"></x-import></sc-if>
+            <sc-if value="{{ c.noState }}" hint-placeholder-val="{{ false }}"><span></span></sc-if>
+            <span class="n">{{ c.name }}</span>
+            <span class="c">{{ c.cluster }}</span>
+            <span class="s">{{ c.note }}</span>
+          </label>
+        </sc-for>
+      </div>
+    </div>
+    <div class="sh-f">
+      <div class="fld">
+        <span class="label">Save as set (optional)</span>
+        <input type="text" aria-label="Set name" value="prod">
+      </div>
+      <div class="grow"></div>
+      <x-import component-from-global-scope="Hyad.Button" variant="quiet">Cancel</x-import>
+      <x-import component-from-global-scope="Hyad.Button" variant="primary">Open 3 contexts</x-import>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const C = (on, state, name, cluster, note) => ({ on, state, name, cluster, note, hasState: !!state, noState: !state });
+    return {
+      no: false, s9: 9, s12: 12,
+      ctxs: [
+        C(true, 'live', 'prod-eu', 'gke_acme-prod_europe-west4_prod-eu', 'open in tab 1'),
+        C(true, 'live', 'prod-us', 'gke_acme-prod_us-central1_prod-us', 'open in tab 2'),
+        C(true, 'failed', 'prod-ap', 'arn:aws:eks:ap-southeast-1:…:cluster/prod-ap', 'unreachable'),
+        C(false, 'live', 'staging', 'gke_acme-staging_europe-west4_stg', 'open in tab 3'),
+        C(false, '', 'staging-eu', 'gke_acme-staging_europe-west1_stg-eu', 'not connected'),
+        C(false, '', 'data-platform', 'arn:aws:eks:eu-west-1:…:cluster/data', 'not connected'),
+        C(false, '', 'kind-dev', 'kind-dev', 'not connected'),
+        C(false, '', 'minikube', 'minikube', 'not connected')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

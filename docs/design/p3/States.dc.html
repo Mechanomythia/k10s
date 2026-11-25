@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>k10s: empty and error states</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="k10s.css">
+<link rel="stylesheet" href="ds/hyad/components/bundle.css">
+<script src="ds/hyad/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600&amp;family=Literata:opsz,wght@7..72,300;7..72,400&amp;family=Spline+Sans+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}a{color:#bdd1ff}a:hover{color:#ece7dd}
+.board{width:1440px;height:900px;box-sizing:border-box;background:#05070a;padding:48px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;font-family:var(--font-ui);color:var(--starlight)}
+.pane{background:var(--sky);border:1px solid var(--neatline);display:flex;flex-direction:column}
+.pane-t{padding:10px 16px;border-bottom:1px solid var(--neatline);display:flex;gap:8px;align-items:center}
+.pane-b{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:32px 48px;max-width:560px}
+.pane-b h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:24px;line-height:30px;letter-spacing:-0.01em}
+.pane-b p{margin:0;color:var(--dust);font-size:14px;line-height:22px}
+.err{font-family:var(--font-mono);font-size:12px;line-height:19px;color:var(--faint);background:var(--sky-raised);border:1px solid var(--neatline);padding:12px 16px;white-space:pre-wrap}
+.acts{display:flex;gap:8px;align-items:center}
+.code{font-family:var(--font-mono);font-size:13px;color:var(--starlight)}
+</style>
+</helmet>
+<div class="board">
+  <section class="pane" aria-label="No kubeconfig">
+    <div class="pane-t"><span class="label">First launch · no kubeconfig</span></div>
+    <div class="pane-b">
+      <x-import component-from-global-scope="Hyad.Star" state="stopped" size="{{ s20 }}" show-label="{{ no }}"></x-import>
+      <h2>No kube contexts found</h2>
+      <p>k10s reads <span class="code">~/.kube/config</span> and every file in <span class="code">KUBECONFIG</span> from your login shell. Neither has a context yet.</p>
+      <p>Add a cluster with your provider’s CLI, for example <span class="code">gcloud container clusters get-credentials</span>. k10s picks it up as soon as the file changes.</p>
+    </div>
+  </section>
+  <section class="pane" aria-label="Unauthorized">
+    <div class="pane-t"><x-import component-from-global-scope="Hyad.Star" state="failed" size="{{ s12 }}" show-label="{{ no }}"></x-import><span class="label">prod-us · unauthorized</span></div>
+    <div class="pane-b">
+      <h2>prod-us refused your credentials</h2>
+      <p>The exec plugin for this context could not get a token. Other contexts in this tab keep working.</p>
+      <div class="err">getting credentials: exec: executable gke-gcloud-auth-plugin not found
+searched PATH from your login shell: /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</div>
+      <p>Install the plugin, or sign in again with <span class="code">gcloud auth login</span>, then retry.</p>
+      <div class="acts">
+        <x-import component-from-global-scope="Hyad.Button" variant="secondary">Retry</x-import>
+        <x-import component-from-global-scope="Hyad.Button" variant="quiet">Remove from this tab</x-import>
+      </div>
+    </div>
+  </section>
+  <section class="pane" aria-label="Unreachable">
+    <div class="pane-t"><x-import component-from-global-scope="Hyad.Star" state="failed" size="{{ s12 }}" show-label="{{ no }}"></x-import><span class="label">prod-ap · unreachable</span></div>
+    <div class="pane-b">
+      <h2>prod-ap does not answer</h2>
+      <p>k10s keeps trying every 30 seconds and shows the rows again when it answers. Check your VPN if this cluster has a private endpoint.</p>
+      <div class="err">dial tcp 10.40.0.2:443: i/o timeout</div>
+      <div class="acts">
+        <x-import component-from-global-scope="Hyad.Button" variant="secondary">Retry now</x-import>
+      </div>
+    </div>
+  </section>
+  <section class="pane" aria-label="No resources">
+    <div class="pane-t"><x-import component-from-global-scope="Hyad.Star" state="live" size="{{ s12 }}" show-label="{{ no }}"></x-import><span class="label">staging · Ingresses in payments</span></div>
+    <div class="pane-b">
+      <h2>No ingresses in payments</h2>
+      <p>The namespace exists and k10s is watching it. New ingresses appear here as they are created.</p>
+      <div class="acts">
+        <x-import component-from-global-scope="Hyad.Button" variant="secondary">Show all namespaces</x-import>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { no: false, s12: 12, s20: 20 };
+  }
+}
+</script>
+</body>
+</html>
