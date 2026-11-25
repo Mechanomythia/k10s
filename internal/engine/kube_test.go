@@ -173,7 +173,7 @@ func TestConnsState(t *testing.T) {
 			t.Setenv("KUBECONFIG", f)
 			c := NewConns(NewKubeconfig())
 			var states []ContextState
-			c.OnState = func(s ContextStateChange) { states = append(states, s.State) }
+			defer c.Listen(func(s ContextStateChange) { states = append(states, s.State) })()
 			cn, err := c.Get(context.Background(), tt.name)
 			if (err == nil) != (tt.want == StateLive) || (cn != nil) != (err == nil) {
 				t.Fatalf("conn=%v err=%v", cn, err)

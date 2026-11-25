@@ -16,7 +16,7 @@ func main() {
 	log.SetOutput(os.Stderr)
 	engine.LoadLoginEnv(engine.LoginShell, 5*time.Second)
 	kube := engine.NewKubeconfig()
-	conns := engine.NewConns(kube) // later tickets set conns.OnState and call conns.Get
+	conns := engine.NewConns(kube)
 	ctx := context.Background()
 	if changed, err := kube.Watch(ctx); err != nil {
 		log.Printf("k10s-engine: kubeconfig watch: %v", err)
@@ -29,6 +29,8 @@ func main() {
 	}
 	s := engine.New()
 	kube.Register(s)
+	conns.Register(s)
+	engine.NewTables(conns).Register(s)
 	if err := s.Serve(ctx, os.Stdin, os.Stdout); err != nil {
 		log.Fatalf("k10s-engine: %v", err)
 	}
