@@ -47,7 +47,6 @@ const (
 	CodeInternal       = "internal"
 	CodeForbidden      = "forbidden" // the API server answered 403
 	CodeConflict       = "conflict"  // the API server answered 409
-	CodeNotFound       = "not_found" // the API server answered 404
 )
 
 // Request is a call from the app. It gets exactly one Response with the same ID.

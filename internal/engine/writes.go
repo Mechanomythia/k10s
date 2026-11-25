@@ -27,38 +27,59 @@ func mapAPIErrors(h Handler) Handler {
 		}
 		switch {
 		case apierrors.IsForbidden(err):
-			err = &Error{Code: CodeForbidden, Message: err.Error()}
+			err = &Error{Code: CodeForbidden, Message: redact(err.Error())}
 		case apierrors.IsConflict(err):
-			err = &Error{Code: CodeConflict, Message: err.Error()}
-		case apierrors.IsNotFound(err):
-			err = &Error{Code: CodeNotFound, Message: err.Error()}
+			err = &Error{Code: CodeConflict, Message: redact(err.Error())}
 		}
 		return res, err
 	}
 }
 
 // target resolves the one object a write names; with kinds, only those apps
-// resources are allowed.
-func (d *Detail) target(ctx context.Context, p ObjectParams, kinds ...string) (dynamic.ResourceInterface, error) {
+// resources are allowed. The resource must be served as named (so group,
+// version and plural cannot steer the request path elsewhere) and the
+// namespace must be given exactly when the kind is namespaced, so a write can
+// never become a request on a collection.
+func (d *Detail) target(ctx context.Context, p ObjectParams, kinds ...string) (dynamic.ResourceInterface, metav1.APIResource, error) {
+	var none metav1.APIResource
 	if err := p.check(); err != nil {
-		return nil, err
+		return nil, none, err
 	}
 	if len(kinds) > 0 && (p.Resource.Group != "apps" || !slices.Contains(kinds, p.Resource.Plural)) {
-		return nil, invalid("%s does not support this action", p.Resource.Plural)
+		return nil, none, invalid("%s does not support this action", p.Resource.Plural)
 	}
 	cn, err := d.Conns.Get(ctx, p.Context)
 	if err != nil {
-		return nil, err
+		return nil, none, err
+	}
+	gv := p.Resource.Version
+	if p.Resource.Group != "" {
+		gv = p.Resource.Group + "/" + p.Resource.Version
+	}
+	list, err := cn.Discovery.ServerResourcesForGroupVersion(gv)
+	if err != nil {
+		return nil, none, err
+	}
+	i := slices.IndexFunc(list.APIResources, func(r metav1.APIResource) bool { return r.Name == p.Resource.Plural })
+	if i < 0 {
+		return nil, none, invalid("%s is not served as %s", p.Resource.Plural, gv)
+	}
+	res := list.APIResources[i]
+	if res.Namespaced && p.Namespace == "" {
+		return nil, none, invalid("namespace is required for %s", p.Resource.Plural)
+	}
+	if !res.Namespaced && p.Namespace != "" {
+		return nil, none, invalid("%s is not namespaced", p.Resource.Plural)
 	}
 	dc, err := d.dynamic(cn.Config)
 	if err != nil {
-		return nil, err
+		return nil, none, err
 	}
 	gvr := schema.GroupVersionResource{Group: p.Resource.Group, Version: p.Resource.Version, Resource: p.Resource.Plural}
-	if p.Namespace != "" {
-		return dc.Resource(gvr).Namespace(p.Namespace), nil
+	if res.Namespaced {
+		return dc.Resource(gvr).Namespace(p.Namespace), res, nil
 	}
-	return dc.Resource(gvr), nil
+	return dc.Resource(gvr), res, nil
 }
 
 func (d *Detail) delete(ctx context.Context, raw json.RawMessage) (any, error) {
@@ -66,7 +87,7 @@ func (d *Detail) delete(ctx context.Context, raw json.RawMessage) (any, error) {
 	if err := decode(raw, &p); err != nil {
 		return nil, err
 	}
-	ri, err := d.target(ctx, p)
+	ri, _, err := d.target(ctx, p)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +106,7 @@ func (d *Detail) scale(ctx context.Context, raw json.RawMessage) (any, error) {
 	if p.Replicas < 0 {
 		return nil, invalid("replicas must be 0 or more")
 	}
-	ri, err := d.target(ctx, ObjectParams{p.Context, p.Resource, p.Namespace, p.Name}, "deployments", "statefulsets", "replicasets")
+	ri, _, err := d.target(ctx, ObjectParams{p.Context, p.Resource, p.Namespace, p.Name}, "deployments", "statefulsets", "replicasets")
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +128,7 @@ func (d *Detail) restart(ctx context.Context, raw json.RawMessage) (any, error) 
 	if err := decode(raw, &p); err != nil {
 		return nil, err
 	}
-	ri, err := d.target(ctx, p, "deployments", "statefulsets", "daemonsets")
+	ri, _, err := d.target(ctx, p, "deployments", "statefulsets", "daemonsets")
 	if err != nil {
 		return nil, err
 	}
@@ -139,22 +160,14 @@ func (d *Detail) replace(ctx context.Context, raw json.RawMessage) (any, error) 
 	if u.GetAPIVersion() != apiVersion || u.GetName() != p.Name || u.GetNamespace() != p.Namespace || u.GetKind() == "" {
 		return nil, invalid("the YAML names a different object")
 	}
-	ri, err := d.target(ctx, ObjectParams{p.Context, p.Resource, p.Namespace, p.Name})
+	if u.GetResourceVersion() == "" {
+		return nil, invalid("the YAML has no metadata.resourceVersion")
+	}
+	ri, res, err := d.target(ctx, ObjectParams{p.Context, p.Resource, p.Namespace, p.Name})
 	if err != nil {
 		return nil, err
 	}
-	// The kind must be the one the resource serves.
-	cn, err := d.Conns.Get(ctx, p.Context)
-	if err != nil {
-		return nil, err
-	}
-	list, err := cn.Discovery.ServerResourcesForGroupVersion(apiVersion)
-	if err != nil {
-		return nil, err
-	}
-	if !slices.ContainsFunc(list.APIResources, func(r metav1.APIResource) bool {
-		return r.Name == p.Resource.Plural && r.Kind == u.GetKind()
-	}) {
+	if res.Kind != u.GetKind() {
 		return nil, invalid("the YAML names a different object")
 	}
 	out, err := ri.Update(ctx, u, metav1.UpdateOptions{})
