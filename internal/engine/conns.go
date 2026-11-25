@@ -109,6 +109,9 @@ func (c *Conns) Get(ctx context.Context, name string) (*Conn, error) {
 	raw, err := cn.Discovery.RESTClient().Get().AbsPath("/version").Do(ctx).Raw()
 	if err != nil {
 		st := classify(err)
+		if apierrors.IsForbidden(err) { // the probe itself was refused
+			st = StateUnauthorized
+		}
 		msg := redact(err.Error())
 		c.state(name, st, msg, "")
 		return nil, errors.New(msg)
@@ -141,10 +144,12 @@ func (c *Conns) state(name string, st ContextState, msg, version string) {
 	}
 }
 
-// classify maps a probe error to a state: 401/403 and exec plugin failures
-// are unauthorized, everything else (dial, timeout, TLS, ...) unreachable.
+// classify maps a probe error to a state: 401 and exec plugin failures are
+// unauthorized, everything else (dial, timeout, TLS, ...) unreachable. A 403
+// is per kind (ADR 0004), so classify never maps it; only Get's /version
+// probe treats a refusal as unauthorized.
 func classify(err error) ContextState {
-	if apierrors.IsUnauthorized(err) || apierrors.IsForbidden(err) {
+	if apierrors.IsUnauthorized(err) {
 		return StateUnauthorized
 	}
 	if m := err.Error(); strings.Contains(m, "getting credentials") || strings.Contains(m, "exec:") {
